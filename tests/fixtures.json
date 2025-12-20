@@ -1,0 +1,367 @@
+{
+  "leaf_update": {
+    "input": {
+      "a1": "val2"
+    },
+    "expected": {
+      "type": "leaf",
+      "path": [
+        10,
+        1
+      ],
+      "value": "val2"
+    }
+  },
+  "leaf_split_existing_shorter_with_prefix": {
+    "input": {
+      "a1": "val1",
+      "a1b": "val2"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10,
+        1
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "11": {
+            "type": "leaf",
+            "path": [],
+            "value": "val2"
+          }
+        },
+        "value": "val1"
+      }
+    }
+  },
+  "leaf_split_new_shorter_with_prefix": {
+    "input": {
+      "a1b": "val1",
+      "a1": "val2"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10,
+        1
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "11": {
+            "type": "leaf",
+            "path": [],
+            "value": "val1"
+          }
+        },
+        "value": "val2"
+      }
+    }
+  },
+  "leaf_split_standard": {
+    "input": {
+      "a1": "val1",
+      "a2": "val2"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "1": {
+            "type": "leaf",
+            "path": [],
+            "value": "val1"
+          },
+          "2": {
+            "type": "leaf",
+            "path": [],
+            "value": "val2"
+          }
+        },
+        "value": null
+      }
+    }
+  },
+  "leaf_split_root_collision": {
+    "input": {
+      "1": "val1",
+      "2": "val2"
+    },
+    "expected": {
+      "type": "branch",
+      "children": {
+        "1": {
+          "type": "leaf",
+          "path": [],
+          "value": "val1"
+        },
+        "2": {
+          "type": "leaf",
+          "path": [],
+          "value": "val2"
+        }
+      },
+      "value": null
+    }
+  },
+  "ext_passthrough": {
+    "input": {
+      "aa": "val1",
+      "aab": "val2"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10,
+        10
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "11": {
+            "type": "leaf",
+            "path": [],
+            "value": "val2"
+          }
+        },
+        "value": "val1"
+      }
+    }
+  },
+  "ext_split_inner": {
+    "input": {
+      "aa1": "val1",
+      "aa2": "val2"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10,
+        10
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "1": {
+            "type": "leaf",
+            "path": [],
+            "value": "val1"
+          },
+          "2": {
+            "type": "leaf",
+            "path": [],
+            "value": "val2"
+          }
+        },
+        "value": null
+      }
+    }
+  },
+  "ext_split_demonstration": {
+    "input": {
+      "aaa": "val1",
+      "aab": "val2",
+      "ac": "val3"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "10": {
+            "type": "branch",
+            "children": {
+              "10": {
+                "type": "leaf",
+                "path": [],
+                "value": "val1"
+              },
+              "11": {
+                "type": "leaf",
+                "path": [],
+                "value": "val2"
+              }
+            },
+            "value": null
+          },
+          "12": {
+            "type": "leaf",
+            "path": [],
+            "value": "val3"
+          }
+        },
+        "value": null
+      }
+    }
+  },
+  "ext_split_value_stop": {
+    "input": {
+      "abc": "val1",
+      "ab": "val2"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10,
+        11
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "12": {
+            "type": "leaf",
+            "path": [],
+            "value": "val1"
+          }
+        },
+        "value": "val2"
+      }
+    }
+  },
+  "ext_diverge": {
+    "input": {
+      "a1": "val1",
+      "b1": "val2"
+    },
+    "expected": {
+      "type": "branch",
+      "children": {
+        "10": {
+          "type": "leaf",
+          "path": [
+            1
+          ],
+          "value": "val1"
+        },
+        "11": {
+          "type": "leaf",
+          "path": [
+            1
+          ],
+          "value": "val2"
+        }
+      },
+      "value": null
+    }
+  },
+  "ext_simple_split": {
+    "input": {
+      "aa": "val1",
+      "ab": "val2"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "10": {
+            "type": "leaf",
+            "path": [],
+            "value": "val1"
+          },
+          "11": {
+            "type": "leaf",
+            "path": [],
+            "value": "val2"
+          }
+        },
+        "value": null
+      }
+    }
+  },
+  "ext_split_value_insert": {
+    "input": {
+      "abc": "val1",
+      "a": "val2"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "11": {
+            "type": "leaf",
+            "path": [
+              12
+            ],
+            "value": "val1"
+          }
+        },
+        "value": "val2"
+      }
+    }
+  },
+  "branch_value_injection": {
+    "input": {
+      "abc": "val1",
+      "abd": "val2",
+      "ab": "val3"
+    },
+    "expected": {
+      "type": "extension",
+      "path": [
+        10,
+        11
+      ],
+      "child": {
+        "type": "branch",
+        "children": {
+          "12": {
+            "type": "leaf",
+            "path": [],
+            "value": "val1"
+          },
+          "13": {
+            "type": "leaf",
+            "path": [],
+            "value": "val2"
+          }
+        },
+        "value": "val3"
+      }
+    }
+  },
+  "branch_recurse": {
+    "input": {
+      "a": "val1",
+      "b": "val2",
+      "c": "val3"
+    },
+    "expected": {
+      "type": "branch",
+      "children": {
+        "10": {
+          "type": "leaf",
+          "path": [],
+          "value": "val1"
+        },
+        "11": {
+          "type": "leaf",
+          "path": [],
+          "value": "val2"
+        },
+        "12": {
+          "type": "leaf",
+          "path": [],
+          "value": "val3"
+        }
+      },
+      "value": null
+    }
+  }
+}

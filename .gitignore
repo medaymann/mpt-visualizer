@@ -1,1 +1,3 @@
 src/core/script.js
+tests/__pycache__/
+node_modules/

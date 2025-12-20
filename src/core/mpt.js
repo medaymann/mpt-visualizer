@@ -193,4 +193,50 @@ export class MPT {
     isEmpty() {
         return this.root === null;
     }
+
+    /**
+     * Converts the Trie to a Canonical JSON format for testing
+     */
+    toJSON() {
+        return this._nodeToJSON(this.root);
+    }
+
+    _nodeToJSON(node) {
+        if (!node) return null;
+
+        const getPath = (p) => Array.isArray(p) ? p : Array.from(p);
+
+        if (node.type === 'leaf') {
+            return {
+                type: "leaf",
+                path: getPath(node.restOfKey),
+                value: node.value
+            };
+        } 
+        
+        else if (node.type === 'extension') {
+            return {
+                type: "extension",
+                path: getPath(node.keySegment),
+                child: this._nodeToJSON(node.child)
+            };
+        } 
+        
+        else {
+            const children = {};
+            const childList = Array.isArray(node.children) ? node.children : Object.values(node.children);
+            
+            for (let i = 0; i < 16; i++) {
+                if (node.children[i]) {
+                    children[i.toString()] = this._nodeToJSON(node.children[i]);
+                }
+            }
+
+            return {
+                type: "branch",
+                children: children,
+                value: node.value || null
+            };
+        }
+    }
 }
