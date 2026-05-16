@@ -369,9 +369,15 @@ export class Renderer {
 
         // Every node is draggable. d3.drag distinguishes a click (<3px movement)
         // from a drag, so the leaf-click highlight still works.
+        //
+        // We MUST stop pointerdown from reaching d3.zoom — otherwise zoom grabs
+        // the gesture as a pan before d3.drag's clickDistance threshold has
+        // been crossed, and you end up panning the whole canvas instead of
+        // moving just the node.
         visual.group
             .datum(visual)
             .style('cursor', 'grab')
+            .on('pointerdown', (event) => event.stopPropagation())
             .call(this.dragBehavior);
 
         // Leaves are clickable for path highlighting.
