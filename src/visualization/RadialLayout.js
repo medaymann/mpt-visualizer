@@ -19,13 +19,14 @@ import { CONFIG } from './config.js';
  */
 export class RadialLayout {
     constructor() {
-        // Initial ring spacing; the algorithm will grow this if any ring needs
+        // Initial ring spacing; the algorithm grows this if any ring needs
         // more space to fit its fan-out without overlap.
-        this.baseRingGap = 360;
+        this.baseRingGap = 220;
         // Minimum tangential gap between sibling nodes (px).
-        this.tangentialGap = 30;
-        // Fraction of 2π we're willing to use (leave a sliver so the diagram
-        // doesn't quite close on itself; reads better visually).
+        this.tangentialGap = 20;
+        // Use most of the circle but leave headroom so the proportional
+        // allocation can absorb rounding without pinching subtrees into
+        // overlap on dense rings.
         this.maxAngularBudget = 2 * Math.PI * 0.95;
     }
 
