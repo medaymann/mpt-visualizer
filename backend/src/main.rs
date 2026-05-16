@@ -24,13 +24,51 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::sync::Mutex;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
-#[derive(Clone)]
 struct AppState {
     http: reqwest::Client,
+    cache: Mutex<BlockCache>,
+}
+
+/// Simple LRU keyed by the normalized block id (e.g. "0x112a880").
+/// Holds up to `cap` entries; on insert past capacity, drops the LRU one.
+struct BlockCache {
+    cap: usize,
+    map: HashMap<String, BlockResponse>,
+    order: VecDeque<String>,
+}
+
+impl BlockCache {
+    fn new(cap: usize) -> Self {
+        Self { cap, map: HashMap::with_capacity(cap), order: VecDeque::with_capacity(cap) }
+    }
+    fn get(&mut self, k: &str) -> Option<BlockResponse> {
+        if !self.map.contains_key(k) { return None; }
+        // Move to most-recent end.
+        if let Some(pos) = self.order.iter().position(|x| x == k) {
+            self.order.remove(pos);
+        }
+        self.order.push_back(k.to_string());
+        self.map.get(k).cloned()
+    }
+    fn put(&mut self, k: String, v: BlockResponse) {
+        if self.map.contains_key(&k) {
+            // Refresh recency.
+            if let Some(pos) = self.order.iter().position(|x| x == &k) {
+                self.order.remove(pos);
+            }
+        } else if self.map.len() >= self.cap {
+            if let Some(old) = self.order.pop_front() {
+                self.map.remove(&old);
+            }
+        }
+        self.order.push_back(k.clone());
+        self.map.insert(k, v);
+    }
 }
 
 #[tokio::main]
@@ -39,6 +77,7 @@ async fn main() -> Result<()> {
         http: reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(15))
             .build()?,
+        cache: Mutex::new(BlockCache::new(64)),
     };
 
     let cors = CorsLayer::new()
@@ -60,7 +99,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct BlockMeta {
     number: u64,
     hash: String,
@@ -70,7 +109,7 @@ struct BlockMeta {
     transactions_root: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct BlockResponse {
     meta: BlockMeta,
     root: Option<mpt::ViewNode>,
@@ -85,6 +124,20 @@ async fn block_handler(
     Path(id): Path<String>,
 ) -> Result<Json<BlockResponse>, ApiError> {
     let (norm, is_hash) = rpc::normalize_block_id(&id).map_err(ApiError::bad_request)?;
+
+    // Cache lookup. Skip moving tags ("latest", "pending", etc.) — they resolve
+    // to different blocks over time. Concrete block numbers and hashes are
+    // immutable, so safe to cache indefinitely.
+    let cache_key = norm.clone();
+    let cacheable = is_hash || norm.starts_with("0x");
+    if cacheable {
+        if let Ok(mut cache) = state.cache.lock() {
+            if let Some(hit) = cache.get(&cache_key) {
+                return Ok(Json(hit));
+            }
+        }
+    }
+
     let method = if is_hash { "eth_getBlockByHash" } else { "eth_getBlockByNumber" };
     // Fetch full tx objects (second param = true) so we can re-RLP each
     // transaction and compute the canonical transactions-trie root.
@@ -149,7 +202,7 @@ async fn block_handler(
         }
     });
 
-    Ok(Json(BlockResponse {
+    let response = BlockResponse {
         meta: BlockMeta {
             number,
             hash,
@@ -161,7 +214,20 @@ async fn block_handler(
         root: view,
         computed_root: computed_hex,
         verified,
-    }))
+    };
+
+    // Insert under the requested key (if it was concrete) AND under the
+    // resolved block-number form, so a subsequent request by that block
+    // number hits the cache even if it was originally fetched as "latest".
+    if let Ok(mut cache) = state.cache.lock() {
+        if cacheable {
+            cache.put(cache_key, response.clone());
+        }
+        let resolved = format!("0x{:x}", response.meta.number);
+        cache.put(resolved, response.clone());
+    }
+
+    Ok(Json(response))
 }
 
 #[derive(Deserialize)]

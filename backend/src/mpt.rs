@@ -208,7 +208,7 @@ pub fn root_hash(node: &Node) -> [u8; 32] {
 
 // --- Public view tree (frontend-friendly) -----------------------------------
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ViewNode {
     Leaf { path: String, value: String },
