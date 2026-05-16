@@ -67,13 +67,42 @@ export class ConnectionManager {
     }
 
     _updateRadial(conn) {
-        const { from, to } = conn.polar;
-        const start = anchorOnRect(conn.fromNode, from.x, from.y, to.x, to.y);
-        const end = anchorOnRect(conn.toNode, to.x, to.y, from.x, from.y);
-        const midAngle = (from.angle + to.angle) / 2;
-        const midR = (from.r + to.r) / 2;
-        const cx = Math.cos(midAngle) * midR;
-        const cy = Math.sin(midAngle) * midR;
+        // Read current centers from the visuals so dragged nodes carry their
+        // edges. The originally-baked polar (r, angle) is only used as a hint
+        // for the control point when nothing has been dragged.
+        const fromCx = conn.fromNode.x + conn.fromNode.width / 2;
+        const fromCy = conn.fromNode.y + conn.fromNode.height / 2;
+        const toCx = conn.toNode.x + conn.toNode.width / 2;
+        const toCy = conn.toNode.y + conn.toNode.height / 2;
+        const start = anchorOnRect(conn.fromNode, fromCx, fromCy, toCx, toCy);
+        const end = anchorOnRect(conn.toNode, toCx, toCy, fromCx, fromCy);
+
+        // Control point: prefer the layout-derived polar midpoint, but if a
+        // node has been dragged off its ring the polar midpoint will be in the
+        // wrong place — detect that and fall back to a straight midpoint.
+        let cx, cy;
+        if (conn.polar) {
+            const polarFromCx = conn.polar.from.x;
+            const polarFromCy = conn.polar.from.y;
+            const polarToCx = conn.polar.to.x;
+            const polarToCy = conn.polar.to.y;
+            const dragged =
+                Math.abs(fromCx - polarFromCx) > 1 || Math.abs(fromCy - polarFromCy) > 1 ||
+                Math.abs(toCx - polarToCx) > 1 || Math.abs(toCy - polarToCy) > 1;
+            if (dragged) {
+                cx = (fromCx + toCx) / 2;
+                cy = (fromCy + toCy) / 2;
+            } else {
+                const midAngle = (conn.polar.from.angle + conn.polar.to.angle) / 2;
+                const midR = (conn.polar.from.r + conn.polar.to.r) / 2;
+                cx = Math.cos(midAngle) * midR;
+                cy = Math.sin(midAngle) * midR;
+            }
+        } else {
+            cx = (fromCx + toCx) / 2;
+            cy = (fromCy + toCy) / 2;
+        }
+
         conn.path.attr("d", `M ${start.x},${start.y} Q ${cx},${cy} ${end.x},${end.y}`);
         if (conn.label) conn.label.attr("x", (start.x + cx) / 2).attr("y", (start.y + cy) / 2);
     }
