@@ -10,6 +10,7 @@
 import { MPTVisualizer } from './MPTVisualizer.js';
 import { EthereumService } from './EthereumService.js';
 import { CUSTOM_EXAMPLES, ETH_EXAMPLES } from './examples.js';
+import * as recentBlocks from './recentBlocks.js';
 
 export function boot() {
     const eth = new EthereumService();
@@ -125,6 +126,8 @@ export function boot() {
             const { root, meta, computedRoot, verified } = await eth.getBlock(id);
             viz.setRoot(root, computedRoot);
             renderBlockMeta(meta, computedRoot, verified);
+            recentBlocks.push(meta.number);
+            renderRecent();
             if (meta.txCount === 0) {
                 showStatus(`Block #${meta.number} has 0 transactions (empty trie)`, 'info');
             } else {
@@ -136,6 +139,44 @@ export function boot() {
             btn.disabled = false;
         }
     }
+
+    // Recent-blocks chips, populated on boot and after each successful load.
+    function renderRecent() {
+        const wrap = document.getElementById('recentBlocksWrap');
+        const row = document.getElementById('recentBlocks');
+        const list = recentBlocks.load();
+        if (list.length === 0) {
+            wrap.style.display = 'none';
+            return;
+        }
+        wrap.style.display = '';
+        row.innerHTML = '';
+        for (const n of list) {
+            const chip = document.createElement('button');
+            chip.className = 'chip';
+            chip.textContent = `#${formatBlockNumber(n)}`;
+            chip.title = `Block ${n}`;
+            chip.addEventListener('click', () => {
+                document.getElementById('blockInput').value = n;
+                loadBlock();
+            });
+            row.appendChild(chip);
+        }
+    }
+
+    function formatBlockNumber(n) {
+        const num = Number(n);
+        if (!Number.isFinite(num)) return n;
+        if (num >= 1_000_000) return (num / 1_000_000).toFixed(num % 1_000_000 === 0 ? 0 : 2) + 'M';
+        if (num >= 1_000) return (num / 1_000).toFixed(0) + 'K';
+        return String(num);
+    }
+
+    document.getElementById('recentBlocksClear').addEventListener('click', () => {
+        recentBlocks.clear();
+        renderRecent();
+    });
+    renderRecent();
     document.getElementById('loadBlockButton').addEventListener('click', loadBlock);
     document.getElementById('blockInput').addEventListener('keydown', e => {
         if (e.key === 'Enter') loadBlock();

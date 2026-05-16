@@ -343,6 +343,14 @@
                 <label>Quick picks</label>
                 <div class="examples" id="ethExamples"></div>
 
+                <div id="recentBlocksWrap" style="display:none">
+                    <label style="display:flex; align-items:center; justify-content:space-between;">
+                        <span>Recent</span>
+                        <button id="recentBlocksClear" class="ghost" style="padding:2px 8px; font-size:10px; text-transform:none; letter-spacing:0;">clear</button>
+                    </label>
+                    <div class="examples" id="recentBlocks"></div>
+                </div>
+
                 <p class="help">Fetches transactions from a public Ethereum RPC, then builds the transactions trie using authentic RLP-encoded tx-index keys (value = tx-hash preview).</p>
 
                 <div id="blockMeta" class="meta-box" style="display:none"></div>
