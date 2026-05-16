@@ -37,6 +37,7 @@ export class MPT {
             this.insert(key, value);
         }
     }
+
     /**
      * Recursively insert into trie
      * @private
@@ -224,8 +225,6 @@ export class MPT {
         
         else {
             const children = {};
-            const childList = Array.isArray(node.children) ? node.children : Object.values(node.children);
-            
             for (let i = 0; i < 16; i++) {
                 if (node.children[i]) {
                     children[i.toString()] = this._nodeToJSON(node.children[i]);
