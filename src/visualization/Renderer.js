@@ -74,7 +74,10 @@ export class Renderer {
         };
 
         this.zoom = d3.zoom()
-            .scaleExtent([0.05, 4])
+            // Floor low enough that even very wide tries (thousands of nodes)
+            // can be fitted in the viewport via scroll-out. The auto-fit path
+            // computes whatever scale is needed and will respect this extent.
+            .scaleExtent([0.001, 4])
             .on("zoom", (event) => {
                 self._pendingTransform = event.transform;
                 if (!self._rafScheduled) {
