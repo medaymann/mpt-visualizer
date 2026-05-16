@@ -394,11 +394,8 @@ export class Renderer {
         const minY = bbox.minY ?? 0;
         const w = (bbox.maxX - bbox.minX) + pad * 2;
         const h = (bbox.maxY - minY) + pad * 2;
-        // Floor on the auto-fit scale so very large tries don't shrink nodes
-        // beyond readability. Below this the user pans/zooms manually.
-        const MIN_FIT_SCALE = 0.35;
-        const fit = Math.min(this.viewW / w, this.viewH / h, 1);
-        const scale = Math.max(fit, MIN_FIT_SCALE);
+        const scale = Math.min(this.viewW / w, this.viewH / h, 1);
+        // Center the bbox in the viewport.
         const tx = (this.viewW - (bbox.maxX + bbox.minX) * scale) / 2;
         const ty = (this.viewH - (bbox.maxY + minY) * scale) / 2;
         const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
