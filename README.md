@@ -9,8 +9,7 @@ An interactive Merkle Patricia Trie explorer with two modes:
   `block.transactionsRoot` from the block header.
 
 Tries are built in Rust, hashed with keccak, and (for blocks) checked
-against the on-chain root. If the roots don't match, the API refuses
-to render.
+against the on-chain root.
 
 ---
 
@@ -30,22 +29,6 @@ npm run serve
 
 Open <http://localhost:8080>. Both modes call the backend, so it must
 be running.
-
----
-
-## Using it
-
-- **Pan** by dragging the canvas; **zoom** with the scroll wheel.
-- **Drag a node** to move it; edges follow live. Drags don't persist
-  across mode switches — the layout is recomputed on every re-render.
-- **Click a leaf** to highlight its path back to the root; everything
-  else dims. Click empty canvas to clear.
-- **Layout toggle** (top-right): Auto / Tree / Radial. Auto picks
-  radial once the trie grows beyond a small handful of nodes.
-  Switching layouts tweens nodes to their new positions.
-- **Fit / Reset zoom** buttons sit next to the layout toggle.
-- **Recent blocks** appear as chips below the Ethereum input and
-  persist via localStorage. Click one to reload it instantly.
 
 ---
 
@@ -80,27 +63,6 @@ always backed by canonical RLP + keccak.
    `block.transactionsRoot`.
 4. If the roots don't match, the API returns HTTP 422 and the
    frontend refuses to render.
-
-**Custom mode** (`POST /api/trie/build`)
-
-Same trie engine, fed by arbitrary hex-keyed entries. The keccak root
-is returned and displayed, but there's nothing external to verify it
-against — it's just the computed hash, not a proof of anything.
-
----
-
-## Performance
-
-- **Hedged RPC fetch** — every backend RPC call races multiple public
-  endpoints in parallel; the first successful response wins. Slow or
-  hung endpoints can't drag down cold loads.
-- **Block cache** — block responses are kept in an in-memory LRU.
-  Re-loading the same block returns in single-digit milliseconds.
-- **Chunked render** — large tries paint in animation-frame-paced
-  batches so the page stays responsive while drawing.
-- **Level-of-detail** — when zoomed out far enough, branch slot
-  internals, edge labels, and secondary text fade so the trie's shape
-  stays readable instead of becoming a wall of tiny glyphs.
 
 ---
 
@@ -141,23 +103,9 @@ index.html              Page shell
 
 ---
 
-## Tech
-
-- **Frontend**: plain ES modules, d3 from CDN, no build step
-- **Backend**: Rust (axum, tokio, reqwest, tiny-keccak)
-- **Layout**: tidy tree for small tries, concentric radial for wide
-  ones. Radial spacing is adaptive — ring radii grow when fan-out
-  demands more angular space.
-- **Interaction**: d3.zoom for pan/zoom (rAF-coalesced); d3.drag for
-  nodes (click vs drag distinguished by a movement threshold)
-
----
-
 ## Limitations
 
-- Only the **transactions trie** is visualized, not the state or
+- In Ethereum mode, only the **transactions trie** is visualized, not the state or
   receipts trie. The transactions trie is rebuilt per block from
   `txs[0..n]` and is small and self-contained. The state trie spans
   hundreds of millions of accounts and would need an archive node.
-- The backend talks to public RPC endpoints. If they all rate-limit
-  you, supply your own.
