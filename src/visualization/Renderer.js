@@ -89,6 +89,24 @@ export class Renderer {
         // up and clear themselves.
         this.bgRect.on('click', () => this.clearHighlight());
 
+        // Shared drag behaviour reused per-visual. We bind each visual to its
+        // <g> via .datum(visual) so the drag subject() can read its current
+        // position and d3 tracks pointer-to-subject offsets correctly across
+        // the world's pan/zoom transform.
+        this.dragBehavior = d3.drag()
+            .clickDistance(3) // <= 3px movement still fires click (for leaf highlight)
+            .subject(function (event, visual) {
+                return { x: visual.x, y: visual.y, _visual: visual };
+            })
+            .on('start', (event) => {
+                event.sourceEvent.stopPropagation();
+            })
+            .on('drag', (event) => {
+                const visual = event.subject._visual;
+                visual.setPosition(event.x, event.y);
+                this.connectionManager.updateAll();
+            });
+
         window.addEventListener('resize', () => this.handleResize());
     }
 
@@ -348,14 +366,20 @@ export class Renderer {
         visual.setPosition(pos.x, pos.y);
         visual.render(this.world);
         this.visualNodes.set(mptNode, visual);
+
+        // Every node is draggable. d3.drag distinguishes a click (<3px movement)
+        // from a drag, so the leaf-click highlight still works.
+        visual.group
+            .datum(visual)
+            .style('cursor', 'grab')
+            .call(this.dragBehavior);
+
         // Leaves are clickable for path highlighting.
         if (mptNode.type === 'leaf') {
-            visual.group
-                .style('cursor', 'pointer')
-                .on('click', (event) => {
-                    event.stopPropagation();
-                    this.toggleHighlight(mptNode);
-                });
+            visual.group.on('click', (event) => {
+                event.stopPropagation();
+                this.toggleHighlight(mptNode);
+            });
         }
     }
 
