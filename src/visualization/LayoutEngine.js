@@ -56,13 +56,14 @@ export class LayoutEngine {
         this._assignPositions(tree, 0, 0, positions);
         // Center the whole layout horizontally on 0 (caller can translate).
         // Compute bbox.
-        let minX = Infinity, maxX = -Infinity, maxY = -Infinity;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         positions.forEach(p => {
             minX = Math.min(minX, p.x);
             maxX = Math.max(maxX, p.x + p.width);
+            minY = Math.min(minY, p.y);
             maxY = Math.max(maxY, p.y);
         });
-        return { positions, bbox: { minX, maxX, maxY: maxY + this.levelHeight } };
+        return { positions, bbox: { minX, maxX, minY, maxY: maxY + this.levelHeight } };
     }
 
     _computeSubtreeWidth(treeNode) {

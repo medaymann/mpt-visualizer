@@ -68,11 +68,12 @@ export class BranchVisual extends VisualNode {
             .attr("stroke", this.config.accent)
             .attr("stroke-opacity", 0.3);
 
-        // Slots
+        // High-detail: individual slot rects + nibble labels.
+        const detail = g.append("g").attr("class", "detail slots");
         for (let i = 0; i < this.config.slotCount; i++) {
             const isActive = this.mptNode.children[i] !== null && this.mptNode.children[i] !== undefined;
             const sx = i * this.slotWidth;
-            g.append("rect")
+            detail.append("rect")
                 .attr("x", sx + 2)
                 .attr("y", this.slotsRowY)
                 .attr("width", this.slotWidth - 4)
@@ -81,7 +82,7 @@ export class BranchVisual extends VisualNode {
                 .attr("fill", isActive ? this.config.slotActiveColor : this.config.slotEmptyColor)
                 .attr("stroke", isActive ? this.config.accent : "transparent")
                 .attr("stroke-width", 1);
-            g.append("text")
+            detail.append("text")
                 .attr("x", sx + this.slotWidth / 2)
                 .attr("y", this.slotsRowY + this.slotsRowHeight / 2 - 2)
                 .attr("text-anchor", "middle")
@@ -91,6 +92,20 @@ export class BranchVisual extends VisualNode {
                 .attr("font-weight", isActive ? 700 : 400)
                 .attr("fill", isActive ? "#0f1620" : "#5a6a82")
                 .text(HEX[i]);
+        }
+
+        // Low-detail fallback: one filled stripe per active slot, no text.
+        const lowDetail = g.append("g").attr("class", "low-detail-only");
+        for (let i = 0; i < this.config.slotCount; i++) {
+            const isActive = this.mptNode.children[i] !== null && this.mptNode.children[i] !== undefined;
+            if (!isActive) continue;
+            const sx = i * this.slotWidth;
+            lowDetail.append("rect")
+                .attr("x", sx)
+                .attr("y", this.slotsRowY)
+                .attr("width", this.slotWidth)
+                .attr("height", this.slotsRowHeight - 8)
+                .attr("fill", this.config.slotActiveColor);
         }
 
         return g;

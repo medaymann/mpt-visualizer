@@ -32,7 +32,8 @@ export class ExtensionVisual extends VisualNode {
             .attr("fill", this.config.accent)
             .text("EXTENSION");
 
-        g.append("text")
+        const detail = g.append("g").attr("class", "detail");
+        detail.append("text")
             .attr("x", 12).attr("y", 44)
             .attr("font-size", "11px")
             .attr("fill", this.config.textColor)
@@ -41,7 +42,7 @@ export class ExtensionVisual extends VisualNode {
 
         const seg = (this.mptNode.keySegment || []).map(n => n.toString(16)).join('');
         const display = seg.length > 24 ? seg.slice(0, 22) + '…' : seg;
-        g.append("text")
+        detail.append("text")
             .attr("x", 12).attr("y", 72)
             .attr("font-family", "monospace")
             .attr("font-size", "18px")
@@ -49,7 +50,7 @@ export class ExtensionVisual extends VisualNode {
             .attr("fill", this.config.textColor)
             .text(display || "(empty)");
 
-        g.append("text")
+        detail.append("text")
             .attr("x", this.width - 12).attr("y", 72)
             .attr("text-anchor", "end")
             .attr("font-size", "10px")

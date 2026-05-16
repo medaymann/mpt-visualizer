@@ -34,14 +34,17 @@ export class LeafVisual extends VisualNode {
 
         const keyHex = (this.mptNode.restOfKey || []).map(n => n.toString(16)).join('');
         const keyDisplay = keyHex.length > 28 ? keyHex.slice(0, 26) + '…' : keyHex;
+        const valueStr = String(this.mptNode.value ?? "");
+        const valDisplay = valueStr.length > 22 ? valueStr.slice(0, 20) + '…' : valueStr;
 
-        g.append("text")
+        const detail = g.append("g").attr("class", "detail");
+        detail.append("text")
             .attr("x", 12).attr("y", 44)
             .attr("font-size", "10px")
             .attr("opacity", 0.6)
             .attr("fill", this.config.textColor)
             .text("key-end");
-        g.append("text")
+        detail.append("text")
             .attr("x", 12).attr("y", 64)
             .attr("font-family", "monospace")
             .attr("font-size", "14px")
@@ -49,7 +52,7 @@ export class LeafVisual extends VisualNode {
             .attr("fill", this.config.textColor)
             .text(keyDisplay || "(empty)");
 
-        g.append("text")
+        detail.append("text")
             .attr("x", this.width - 12).attr("y", 44)
             .attr("text-anchor", "end")
             .attr("font-size", "10px")
@@ -57,9 +60,7 @@ export class LeafVisual extends VisualNode {
             .attr("fill", this.config.textColor)
             .text("value");
 
-        const valueStr = String(this.mptNode.value ?? "");
-        const valDisplay = valueStr.length > 22 ? valueStr.slice(0, 20) + '…' : valueStr;
-        g.append("text")
+        detail.append("text")
             .attr("x", this.width - 12).attr("y", 64)
             .attr("text-anchor", "end")
             .attr("font-family", "monospace")

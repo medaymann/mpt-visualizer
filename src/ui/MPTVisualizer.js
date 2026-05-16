@@ -34,6 +34,10 @@ export class MPTVisualizer {
         this.renderer.resetView();
     }
 
+    setLayoutMode(mode) {
+        this.renderer.setLayoutMode(mode);
+    }
+
     render() {
         this.renderer.render(this.mpt.getRoot());
     }
