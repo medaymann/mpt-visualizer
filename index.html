@@ -195,6 +195,21 @@
         .world .low-detail-only { display: none; }
         .world.low-detail .detail { display: none; }
         .world.low-detail .low-detail-only { display: inline; }
+        /* Path-highlight mode: dim non-active nodes & edges so the chain stands out */
+        .world.path-mode .mpt-node:not([data-active="true"]) { opacity: 0.18; }
+        .world.path-mode .connections-layer path:not([data-active="true"]) { opacity: 0.12; }
+        .world.path-mode .connections-layer text:not([data-active="true"]) { opacity: 0.12; }
+        .world.path-mode .mpt-node[data-active="true"] rect:first-child {
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 6px rgba(245, 166, 35, 0.55));
+        }
+        .world.path-mode .connections-layer path[data-active="true"] {
+            stroke: var(--accent-2);
+            stroke-width: 3px;
+        }
+        .mpt-node, .connections-layer path, .connections-layer text {
+            transition: opacity 0.25s ease;
+        }
         .canvas-overlay {
             position: absolute;
             top: 14px;
