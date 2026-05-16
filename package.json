@@ -5,7 +5,12 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "node --test tests/mpt.test.js"
+    "test": "node --test 'tests/*.test.js'",
+    "serve": "python3 -m http.server 8080",
+    "backend:build": "cargo build --manifest-path backend/Cargo.toml --release",
+    "backend:run": "cargo run --manifest-path backend/Cargo.toml --release",
+    "backend:test": "cargo test --manifest-path backend/Cargo.toml",
+    "backend:verify": "cargo test --manifest-path backend/Cargo.toml --test verify_real_blocks -- --ignored"
   },
   "keywords": [],
   "author": "",

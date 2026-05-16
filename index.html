@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>MPT Visualizer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --bg: #0a1018;
+            --panel: #141d2b;
+            --panel-2: #1a2434;
+            --border: #243049;
+            --accent: #5b8fd9;
+            --accent-2: #f5a623;
+            --text: #e8f1ff;
+            --text-dim: #8aa0bf;
+            --danger: #d9534f;
+            --ok: #5fc299;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+        .app {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            height: 100vh;
+        }
+        .sidebar {
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .brand {
+            padding: 18px 20px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .brand h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .brand p {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+        .tab {
+            flex: 1;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            color: var(--text);
+            border-bottom-color: var(--accent);
+            background: var(--panel-2);
+        }
+        .tab:hover:not(.active) { color: var(--text); }
+        .panel-body {
+            padding: 18px 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .panel-body[hidden] { display: none; }
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin: 14px 0 6px;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 9px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13px;
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        }
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+            font-size: 12px;
+        }
+        button.primary, button.secondary, button.ghost {
+            padding: 9px 14px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        button.primary {
+            background: var(--accent);
+            color: #0a1018;
+        }
+        button.primary:hover { background: #7aa7d9; }
+        button.secondary {
+            background: var(--panel-2);
+            color: var(--text);
+            border-color: var(--border);
+        }
+        button.secondary:hover { border-color: var(--accent); }
+        button.ghost {
+            background: transparent;
+            color: var(--text-dim);
+            border-color: var(--border);
+        }
+        button.ghost:hover { color: var(--text); border-color: var(--accent); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+        .btn-row button { flex: 1; }
+        .examples {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .chip {
+            font-size: 11px;
+            padding: 4px 10px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-dim);
+            cursor: pointer;
+        }
+        .chip:hover { color: var(--text); border-color: var(--accent); }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border);
+        }
+        .stat {
+            text-align: center;
+            padding: 8px 4px;
+            background: var(--panel-2);
+            border-radius: 6px;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .stat-label {
+            font-size: 10px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+        .meta-box {
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--panel-2);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-dim);
+            line-height: 1.6;
+            font-family: ui-monospace, "SF Mono", monospace;
+            word-break: break-all;
+        }
+        .meta-box .k { color: var(--text); }
+        .canvas-wrap {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+        }
+        #canvas { width: 100%; height: 100%; }
+        .canvas-overlay {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            display: flex;
+            gap: 6px;
+            z-index: 5;
+        }
+        .legend {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            background: rgba(20, 29, 43, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 11px;
+            color: var(--text-dim);
+            display: flex;
+            gap: 14px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-swatch {
+            width: 10px; height: 10px; border-radius: 2px;
+        }
+        .status {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            font-size: 12px;
+            color: var(--text-dim);
+            padding: 6px 10px;
+            background: rgba(20, 29, 43, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: none;
+        }
+        .status.show { display: block; }
+        .status.error { color: var(--danger); border-color: var(--danger); }
+        .status.ok { color: var(--ok); }
+        .help {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>Merkle Patricia Trie</h1>
+                <p>Live structure visualizer &middot; pan &amp; zoom</p>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" data-mode="custom">Custom</button>
+                <button class="tab" data-mode="ethereum">Ethereum block</button>
+            </div>
+
+            <div class="panel-body" id="panel-custom">
+                <label>Single insert</label>
+                <input type="text" id="keyInput" placeholder="key (hex, e.g. 1a2b)" />
+                <div style="height:8px"></div>
+                <input type="text" id="valueInput" placeholder="value" />
+                <div class="btn-row">
+                    <button class="primary" id="addButton">Insert</button>
+                    <button class="ghost" id="clearButton">Clear trie</button>
+                </div>
+
+                <label>Bulk insert (key=value per line, or JSON)</label>
+                <textarea id="bulkInput" placeholder='1234=alice&#10;1235=bob&#10;abcd=carol'></textarea>
+                <div class="btn-row">
+                    <button class="secondary" id="bulkButton">Insert bulk</button>
+                </div>
+
+                <label>Examples</label>
+                <div class="examples" id="examples"></div>
+
+                <p class="help">Keys are hex (0-9, a-f). Each hex character is one trie nibble.</p>
+
+                <div class="stats">
+                    <div class="stat"><div class="stat-value" id="statLeaves">0</div><div class="stat-label">Leaf</div></div>
+                    <div class="stat"><div class="stat-value" id="statBranches">0</div><div class="stat-label">Branch</div></div>
+                    <div class="stat"><div class="stat-value" id="statExtensions">0</div><div class="stat-label">Ext</div></div>
+                    <div class="stat"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total</div></div>
+                </div>
+            </div>
+
+            <div class="panel-body" id="panel-ethereum" hidden>
+                <label>Block number or hash</label>
+                <input type="text" id="blockInput" placeholder='e.g. 18000000, "latest", or 0x...' value="latest" />
+                <div class="btn-row">
+                    <button class="primary" id="loadBlockButton">Load block</button>
+                    <button class="ghost" id="clearEthButton">Clear</button>
+                </div>
+
+                <label>Quick picks</label>
+                <div class="examples" id="ethExamples"></div>
+
+                <p class="help">Fetches transactions from a public Ethereum RPC, then builds the transactions trie using authentic RLP-encoded tx-index keys (value = tx-hash preview).</p>
+
+                <div id="blockMeta" class="meta-box" style="display:none"></div>
+
+                <div class="stats">
+                    <div class="stat"><div class="stat-value" id="statLeaves2">0</div><div class="stat-label">Leaf</div></div>
+                    <div class="stat"><div class="stat-value" id="statBranches2">0</div><div class="stat-label">Branch</div></div>
+                    <div class="stat"><div class="stat-value" id="statExtensions2">0</div><div class="stat-label">Ext</div></div>
+                    <div class="stat"><div class="stat-value" id="statTotal2">0</div><div class="stat-label">Total</div></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="canvas-wrap">
+            <div id="canvas"></div>
+            <div class="canvas-overlay">
+                <button class="secondary" id="fitButton">Fit</button>
+                <button class="ghost" id="resetButton">Reset zoom</button>
+            </div>
+            <div class="status" id="status"></div>
+            <div class="legend">
+                <div class="legend-item"><span class="legend-swatch" style="background:#5b8fd9"></span> Branch</div>
+                <div class="legend-item"><span class="legend-swatch" style="background:#5fc299"></span> Extension</div>
+                <div class="legend-item"><span class="legend-swatch" style="background:#b07fd9"></span> Leaf</div>
+                <div class="legend-item"><span class="legend-swatch" style="background:#f5a623"></span> Value</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script type="module">
+        import { MPTVisualizer } from './src/ui/MPTVisualizer.js';
+        import { EthereumService } from './src/ui/EthereumService.js';
+
+        const viz = new MPTVisualizer('#canvas');
+        const eth = new EthereumService();
+
+        const statusEl = document.getElementById('status');
+        let statusTimer = null;
+        function showStatus(msg, kind = 'info', persist = false) {
+            statusEl.textContent = msg;
+            statusEl.className = 'status show ' + (kind === 'error' ? 'error' : kind === 'ok' ? 'ok' : '');
+            clearTimeout(statusTimer);
+            if (!persist) {
+                statusTimer = setTimeout(() => { statusEl.classList.remove('show'); }, 3500);
+            }
+        }
+        function clearStatus() {
+            clearTimeout(statusTimer);
+            statusEl.classList.remove('show');
+        }
+
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(t => t.addEventListener('click', () => {
+            tabs.forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            const mode = t.dataset.mode;
+            document.getElementById('panel-custom').hidden = mode !== 'custom';
+            document.getElementById('panel-ethereum').hidden = mode !== 'ethereum';
+            viz.clear();
+            updateStats();
+            document.getElementById('blockMeta').style.display = 'none';
+            clearStatus();
+        }));
+
+        document.getElementById('addButton').addEventListener('click', () => {
+            const key = document.getElementById('keyInput').value.trim();
+            const value = document.getElementById('valueInput').value.trim();
+            if (!key) { showStatus('Enter a hex key', 'error'); return; }
+            try {
+                viz.insert(key, value || '(empty)');
+                document.getElementById('keyInput').value = '';
+                document.getElementById('valueInput').value = '';
+                updateStats();
+            } catch (e) { showStatus(e.message, 'error'); }
+        });
+
+        document.getElementById('clearButton').addEventListener('click', () => {
+            viz.clear();
+            updateStats();
+        });
+
+        document.getElementById('bulkButton').addEventListener('click', () => {
+            const text = document.getElementById('bulkInput').value.trim();
+            if (!text) return;
+            let dict = {};
+            try {
+                if (text.startsWith('{')) {
+                    dict = JSON.parse(text);
+                } else {
+                    for (const line of text.split('\n')) {
+                        const s = line.trim();
+                        if (!s) continue;
+                        const eq = s.indexOf('=');
+                        if (eq < 0) throw new Error(`Line missing '=': ${s}`);
+                        dict[s.slice(0, eq).trim()] = s.slice(eq + 1).trim();
+                    }
+                }
+                viz.insertBulk(dict);
+                updateStats();
+                showStatus(`Inserted ${Object.keys(dict).length} entries`, 'ok');
+            } catch (e) { showStatus('Bulk parse error: ' + e.message, 'error'); }
+        });
+
+        const EXAMPLES = [
+            { name: 'Branching demo', dict: { '1234': 'alice', '1235': 'bob', '12ab': 'carol', 'cafe': 'dave' } },
+            { name: 'Extension split', dict: { 'abcd1': 'one', 'abcd2': 'two', 'abef3': 'three' } },
+            { name: 'Wide branch', dict: { '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', 'a': 'ten', 'f': 'fif' } },
+            { name: 'Deep chain', dict: { '0000000000': 'deep-a', '0000000001': 'deep-b' } },
+            { name: 'Prefix overlap', dict: { 'aa': 'A', 'aaaa': 'AA', 'aaaaaa': 'AAA' } }
+        ];
+        const examplesEl = document.getElementById('examples');
+        EXAMPLES.forEach(ex => {
+            const chip = document.createElement('button');
+            chip.className = 'chip';
+            chip.textContent = ex.name;
+            chip.addEventListener('click', () => {
+                viz.clear();
+                viz.insertBulk(ex.dict);
+                updateStats();
+                showStatus(`Loaded "${ex.name}"`, 'ok');
+            });
+            examplesEl.appendChild(chip);
+        });
+
+        const ETH_EXAMPLES = [
+            { name: 'Latest', id: 'latest' },
+            { name: 'Block 4M', id: '4000000' },
+            { name: 'Block 12M', id: '12000000' },
+            { name: 'Block 18M', id: '18000000' }
+        ];
+        const ethExamplesEl = document.getElementById('ethExamples');
+        ETH_EXAMPLES.forEach(ex => {
+            const chip = document.createElement('button');
+            chip.className = 'chip';
+            chip.textContent = ex.name;
+            chip.addEventListener('click', () => {
+                document.getElementById('blockInput').value = ex.id;
+                loadBlock();
+            });
+            ethExamplesEl.appendChild(chip);
+        });
+
+        async function loadBlock() {
+            const id = document.getElementById('blockInput').value.trim();
+            if (!id) { showStatus('Enter a block id', 'error'); return; }
+            const btn = document.getElementById('loadBlockButton');
+            btn.disabled = true;
+            showStatus('Fetching block ' + id + '...', 'info', true);
+            try {
+                const { root, meta, computedRoot, verified } = await eth.getBlock(id);
+                viz.setRoot(root);
+                renderBlockMeta(meta, computedRoot, verified);
+                updateStats();
+                if (meta.txCount === 0) {
+                    showStatus(`Block #${meta.number} has 0 transactions (empty trie)`, 'info');
+                } else {
+                    showStatus(`Loaded block #${meta.number} (${meta.txCount} txs)`, 'ok');
+                }
+            } catch (e) {
+                showStatus('Failed: ' + e.message, 'error', true);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        document.getElementById('loadBlockButton').addEventListener('click', loadBlock);
+        document.getElementById('blockInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') loadBlock();
+        });
+        document.getElementById('clearEthButton').addEventListener('click', () => {
+            viz.clear();
+            updateStats();
+            document.getElementById('blockMeta').style.display = 'none';
+        });
+
+        function renderBlockMeta(m, computedRoot, verified) {
+            const el = document.getElementById('blockMeta');
+            const ts = new Date(m.timestamp * 1000).toISOString().replace('T', ' ').slice(0, 19);
+            const badge = verified
+                ? `<span style="color:var(--ok)">✓ computed root matches block.transactionsRoot</span>`
+                : `<span style="color:var(--danger)">✗ root mismatch — trie may be wrong</span>`;
+            el.innerHTML =
+                `<div><span class="k">block</span> #${m.number}</div>` +
+                `<div><span class="k">hash</span> ${m.hash}</div>` +
+                `<div><span class="k">txs</span> ${m.txCount}</div>` +
+                `<div><span class="k">gasUsed</span> ${m.gasUsed.toLocaleString()}</div>` +
+                `<div><span class="k">time</span> ${ts} UTC</div>` +
+                `<div><span class="k">tx-root</span> ${m.transactionsRoot}</div>` +
+                `<div style="margin-top:6px">${badge}</div>`;
+            el.style.display = 'block';
+        }
+
+        function updateStats() {
+            const s = viz.getStats();
+            document.getElementById('statLeaves').textContent = s.leaves;
+            document.getElementById('statBranches').textContent = s.branches;
+            document.getElementById('statExtensions').textContent = s.extensions;
+            document.getElementById('statTotal').textContent = s.total;
+            document.getElementById('statLeaves2').textContent = s.leaves;
+            document.getElementById('statBranches2').textContent = s.branches;
+            document.getElementById('statExtensions2').textContent = s.extensions;
+            document.getElementById('statTotal2').textContent = s.total;
+        }
+
+        document.getElementById('fitButton').addEventListener('click', () => viz.render());
+        document.getElementById('resetButton').addEventListener('click', () => viz.resetView());
+
+        viz.insertBulk(EXAMPLES[0].dict);
+        updateStats();
+
+        ['keyInput', 'valueInput'].forEach(id => {
+            document.getElementById(id).addEventListener('keydown', e => {
+                if (e.key === 'Enter') document.getElementById('addButton').click();
+            });
+        });
+    </script>
+</body>
+</html>
