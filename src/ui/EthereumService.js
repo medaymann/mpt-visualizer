@@ -99,18 +99,10 @@ export class EthereumService {
      * @returns {Promise<{ root: object|null, meta: object, computedRoot: string, verified: boolean }>}
      */
     async getBlock(blockId) {
-        const url = `${this.baseUrl}/api/block/${encodeURIComponent(blockId.trim())}`;
-        let res;
-        try {
-            res = await fetch(url);
-        } catch (e) {
-            throw new Error(`Cannot reach backend at ${this.baseUrl} — is it running?`);
-        }
-        const body = await res.json().catch(() => null);
-        if (!res.ok) {
-            const msg = body && body.error ? body.error : `HTTP ${res.status}`;
-            throw new Error(msg);
-        }
+        const body = await this._fetch(
+            `${this.baseUrl}/api/block/${encodeURIComponent(blockId.trim())}`,
+            { method: 'GET' }
+        );
         return {
             root: viewToMpt(body.root),
             meta: {
@@ -124,5 +116,38 @@ export class EthereumService {
             computedRoot: body.computed_root,
             verified: body.verified
         };
+    }
+
+    /**
+     * Build a trie from arbitrary hex-keyed entries (custom mode).
+     * @param {Object<string,string>} entries
+     * @returns {Promise<{ root: object|null, computedRoot: string, nodeCount: number }>}
+     */
+    async buildTrie(entries) {
+        const body = await this._fetch(`${this.baseUrl}/api/trie/build`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entries })
+        });
+        return {
+            root: viewToMpt(body.root),
+            computedRoot: body.computed_root,
+            nodeCount: body.node_count
+        };
+    }
+
+    async _fetch(url, init) {
+        let res;
+        try {
+            res = await fetch(url, init);
+        } catch (e) {
+            throw new Error(`Cannot reach backend at ${this.baseUrl} — is it running?`);
+        }
+        const body = await res.json().catch(() => null);
+        if (!res.ok) {
+            const msg = body && body.error ? body.error : `HTTP ${res.status}`;
+            throw new Error(msg);
+        }
+        return body;
     }
 }

@@ -2,6 +2,9 @@
  * App: orchestrates the page. Wires the two-tab UI, examples, custom-mode
  * inserts, Ethereum block loading, layout toggle, and stats. Boots one
  * MPTVisualizer + one EthereumService.
+ *
+ * All trie construction goes through the Rust backend so both modes display
+ * a cryptographically grounded root hash.
  */
 
 import { MPTVisualizer } from './MPTVisualizer.js';
@@ -9,8 +12,8 @@ import { EthereumService } from './EthereumService.js';
 import { CUSTOM_EXAMPLES, ETH_EXAMPLES } from './examples.js';
 
 export function boot() {
-    const viz = new MPTVisualizer('#canvas');
     const eth = new EthereumService();
+    const viz = new MPTVisualizer('#canvas', eth);
 
     // --- Status toast ----------------------------------------------------
     const statusEl = document.getElementById('status');
@@ -28,6 +31,10 @@ export function boot() {
         statusEl.classList.remove('show');
     }
 
+    function trapError(promise) {
+        return promise.catch(e => showStatus(e.message || String(e), 'error'));
+    }
+
     // --- Tabs ------------------------------------------------------------
     const tabs = document.querySelectorAll('.tab');
     tabs.forEach(t => t.addEventListener('click', () => {
@@ -37,7 +44,6 @@ export function boot() {
         document.getElementById('panel-custom').hidden = mode !== 'custom';
         document.getElementById('panel-ethereum').hidden = mode !== 'ethereum';
         viz.clear();
-        updateStats();
         document.getElementById('blockMeta').style.display = 'none';
         clearStatus();
     }));
@@ -47,17 +53,14 @@ export function boot() {
         const key = document.getElementById('keyInput').value.trim();
         const value = document.getElementById('valueInput').value.trim();
         if (!key) { showStatus('Enter a hex key', 'error'); return; }
-        try {
-            viz.insert(key, value || '(empty)');
+        trapError(viz.insert(key, value || '(empty)').then(() => {
             document.getElementById('keyInput').value = '';
             document.getElementById('valueInput').value = '';
-            updateStats();
-        } catch (e) { showStatus(e.message, 'error'); }
+        }));
     });
 
     document.getElementById('clearButton').addEventListener('click', () => {
         viz.clear();
-        updateStats();
     });
 
     document.getElementById('bulkButton').addEventListener('click', () => {
@@ -76,10 +79,13 @@ export function boot() {
                     dict[s.slice(0, eq).trim()] = s.slice(eq + 1).trim();
                 }
             }
-            viz.insertBulk(dict);
-            updateStats();
+        } catch (e) {
+            showStatus('Bulk parse error: ' + e.message, 'error');
+            return;
+        }
+        trapError(viz.insertBulk(dict).then(() => {
             showStatus(`Inserted ${Object.keys(dict).length} entries`, 'ok');
-        } catch (e) { showStatus('Bulk parse error: ' + e.message, 'error'); }
+        }));
     });
 
     const examplesEl = document.getElementById('examples');
@@ -89,9 +95,9 @@ export function boot() {
         chip.textContent = ex.name;
         chip.addEventListener('click', () => {
             viz.clear();
-            viz.insertBulk(ex.dict);
-            updateStats();
-            showStatus(`Loaded "${ex.name}"`, 'ok');
+            trapError(viz.insertBulk(ex.dict).then(() => {
+                showStatus(`Loaded "${ex.name}"`, 'ok');
+            }));
         });
         examplesEl.appendChild(chip);
     });
@@ -117,9 +123,8 @@ export function boot() {
         showStatus('Fetching block ' + id + '...', 'info', true);
         try {
             const { root, meta, computedRoot, verified } = await eth.getBlock(id);
-            viz.setRoot(root);
+            viz.setRoot(root, computedRoot);
             renderBlockMeta(meta, computedRoot, verified);
-            updateStats();
             if (meta.txCount === 0) {
                 showStatus(`Block #${meta.number} has 0 transactions (empty trie)`, 'info');
             } else {
@@ -137,7 +142,6 @@ export function boot() {
     });
     document.getElementById('clearEthButton').addEventListener('click', () => {
         viz.clear();
-        updateStats();
         document.getElementById('blockMeta').style.display = 'none';
     });
 
@@ -158,14 +162,29 @@ export function boot() {
         el.style.display = 'block';
     }
 
-    // --- Stats -----------------------------------------------------------
-    function updateStats() {
+    // --- Stats + root ----------------------------------------------------
+    function refresh() {
         const s = viz.getStats();
         for (const id of ['statLeaves', 'statLeaves2']) document.getElementById(id).textContent = s.leaves;
         for (const id of ['statBranches', 'statBranches2']) document.getElementById(id).textContent = s.branches;
         for (const id of ['statExtensions', 'statExtensions2']) document.getElementById(id).textContent = s.extensions;
         for (const id of ['statTotal', 'statTotal2']) document.getElementById(id).textContent = s.total;
+
+        // Custom-mode root display.
+        const rootEl = document.getElementById('customRoot');
+        if (rootEl) {
+            const r = viz.getComputedRoot();
+            if (r) {
+                rootEl.innerHTML =
+                    `<div><span class="k">root</span> ${r}</div>` +
+                    `<div style="margin-top:4px"><span style="color:var(--ok)">✓ keccak-verified by backend</span></div>`;
+                rootEl.style.display = 'block';
+            } else {
+                rootEl.style.display = 'none';
+            }
+        }
     }
+    viz.onChange(refresh);
 
     // --- Canvas controls -------------------------------------------------
     document.getElementById('fitButton').addEventListener('click', () => viz.render());
@@ -180,8 +199,7 @@ export function boot() {
     });
 
     // --- Boot with the first custom example so the canvas isn't empty ----
-    viz.insertBulk(CUSTOM_EXAMPLES[0].dict);
-    updateStats();
+    trapError(viz.insertBulk(CUSTOM_EXAMPLES[0].dict));
 
     ['keyInput', 'valueInput'].forEach(id => {
         document.getElementById(id).addEventListener('keydown', e => {

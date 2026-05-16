@@ -5,8 +5,9 @@
 //! as JSON ready for the frontend renderer.
 //!
 //! Endpoints:
-//!   GET /api/block/:id   — id may be a decimal/hex block number, a block hash, or "latest"
-//!   GET /healthz         — liveness probe
+//!   GET  /api/block/:id   — id may be a decimal/hex block number, a block hash, or "latest"
+//!   POST /api/trie/build  — body {"entries": {"hexKey": "value", ...}} returns {root, computed_root}
+//!   GET  /healthz         — liveness probe
 
 mod rlp;
 mod mpt;
@@ -18,11 +19,12 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Json},
-    routing::get,
+    routing::{get, post},
     Router,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -47,6 +49,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route("/api/block/:id", get(block_handler))
+        .route("/api/trie/build", post(build_handler))
         .with_state(Arc::new(state))
         .layer(cors);
 
@@ -159,6 +162,78 @@ async fn block_handler(
         computed_root: computed_hex,
         verified,
     }))
+}
+
+#[derive(Deserialize)]
+struct BuildRequest {
+    /// hex-encoded key (with or without 0x prefix) → UTF-8 string value
+    entries: BTreeMap<String, String>,
+}
+
+#[derive(Serialize)]
+struct BuildResponse {
+    root: Option<mpt::ViewNode>,
+    computed_root: String,
+    node_count: usize,
+}
+
+async fn build_handler(
+    Json(req): Json<BuildRequest>,
+) -> Result<Json<BuildResponse>, ApiError> {
+    let mut entries: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity(req.entries.len());
+    for (k, v) in &req.entries {
+        let key_bytes = decode_hex_key(k).map_err(ApiError::bad_request)?;
+        entries.push((key_bytes, v.as_bytes().to_vec()));
+    }
+
+    let trie = mpt::build(&entries);
+    let computed = mpt::root_hash(&trie);
+    let computed_hex = format!("0x{}", hex::encode(computed));
+
+    // Pair raw value bytes back to their original UTF-8 string for display.
+    let value_lookup: std::collections::HashMap<Vec<u8>, String> = req
+        .entries
+        .values()
+        .map(|s| (s.as_bytes().to_vec(), s.clone()))
+        .collect();
+    let view = mpt::to_view(&trie, &|v| {
+        value_lookup.get(v).cloned().unwrap_or_else(|| {
+            // Fallback: try UTF-8, else hex.
+            String::from_utf8(v.to_vec()).unwrap_or_else(|_| format!("0x{}", hex::encode(v)))
+        })
+    });
+
+    let node_count = count_nodes(&trie);
+    Ok(Json(BuildResponse { root: view, computed_root: computed_hex, node_count }))
+}
+
+fn decode_hex_key(s: &str) -> Result<Vec<u8>, anyhow::Error> {
+    let s = s.strip_prefix("0x").unwrap_or(s);
+    if s.is_empty() {
+        return Ok(Vec::new());
+    }
+    // Allow odd-length hex by left-padding with a zero — matches the frontend's
+    // historical behavior of treating "abc" as nibble path [a,b,c].
+    let padded;
+    let s = if s.len() % 2 == 1 {
+        padded = format!("0{s}");
+        padded.as_str()
+    } else {
+        s
+    };
+    hex::decode(s).map_err(|e| anyhow::anyhow!("invalid hex key '{s}': {e}"))
+}
+
+fn count_nodes(node: &mpt::Node) -> usize {
+    use mpt::Node::*;
+    match node {
+        Empty => 0,
+        Leaf { .. } => 1,
+        Extension { child, .. } => 1 + count_nodes(child),
+        Branch { children, .. } => {
+            1 + children.iter().flatten().map(|c| count_nodes(c)).sum::<usize>()
+        }
+    }
 }
 
 fn parse_hex_u64(v: Option<&serde_json::Value>) -> Option<u64> {

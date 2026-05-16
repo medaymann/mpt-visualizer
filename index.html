@@ -299,7 +299,7 @@
                 <label>Examples</label>
                 <div class="examples" id="examples"></div>
 
-                <p class="help">Keys are hex (0-9, a-f). Each hex character is one trie nibble.</p>
+                <p class="help">Keys are hex (0-9, a-f). The Rust backend computes the trie and its keccak root.</p>
 
                 <div class="stats">
                     <div class="stat"><div class="stat-value" id="statLeaves">0</div><div class="stat-label">Leaf</div></div>
@@ -307,6 +307,8 @@
                     <div class="stat"><div class="stat-value" id="statExtensions">0</div><div class="stat-label">Ext</div></div>
                     <div class="stat"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total</div></div>
                 </div>
+
+                <div id="customRoot" class="meta-box" style="display:none; margin-top: 12px;"></div>
             </div>
 
             <div class="panel-body" id="panel-ethereum" hidden>

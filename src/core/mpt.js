@@ -1,7 +1,10 @@
 /**
- * Merkle Patricia Trie Implementation
- * 
- * Core MPT data structure with incremental insertion algorithm.
+ * In-memory MPT — TEST INFRASTRUCTURE ONLY.
+ *
+ * The runtime UI builds tries via the Rust backend (POST /api/trie/build).
+ * This file exists so the layout and stats unit tests can construct MPT
+ * shapes without booting the backend.
+ *
  * Time complexity: O(d) per insertion, where d is key depth.
  */
 

@@ -37,7 +37,7 @@ backend running because RLP encoding + keccak hashing happen in Rust.
 ## Testing
 
 ```bash
-npm test                  # 54 frontend tests (mpt logic, layout, stats, rlp/block-id helpers)
+npm test                  # 40 frontend tests (layout, stats, rlp/block-id helpers)
 npm run backend:test      # 12 backend unit tests (rlp, mpt, rpc)
 npm run backend:verify    # 6 integration tests fetching real blocks and asserting root match
 ```
@@ -48,20 +48,29 @@ genesis, block 4M (legacy txs), 12.2M (Berlin / EIP-2930), 15M
 
 ---
 
-## How block verification works
+## How verification works
 
-For each transaction in a block:
+Both modes go through the Rust backend so the displayed trie is always
+backed by canonical RLP + keccak.
 
-1. The backend re-encodes the transaction as canonical RLP. Each tx type
-   has its own field ordering — legacy, EIP-2930 (0x01), EIP-1559 (0x02),
-   EIP-4844 blob (0x03), and EIP-7702 set-code (0x04) are all supported.
+**Ethereum mode** (`GET /api/block/:id`)
+
+1. The backend re-encodes each transaction as canonical RLP. Every tx
+   type is supported: legacy, EIP-2930 (0x01), EIP-1559 (0x02),
+   EIP-4844 blob (0x03), EIP-7702 set-code (0x04).
 2. The pair `(RLP(tx_index), tx_envelope_bytes)` is inserted into a
    Merkle Patricia Trie.
-3. After all inserts, the trie's keccak root is computed and compared
-   to `block.transactionsRoot` from the block header.
+3. The trie's keccak root is computed and compared to
+   `block.transactionsRoot` from the block header.
+4. If the roots don't match, the API returns HTTP 422 and the
+   visualization refuses to render.
 
-If the computed root doesn't match, the API returns HTTP 422 — the
-visualization refuses to render an unverified trie.
+**Custom mode** (`POST /api/trie/build`)
+
+Same trie engine, fed by arbitrary hex-keyed entries. The keccak root
+is returned but there's nothing external to compare it to — it's shown
+as "keccak-verified by backend" so users can see the structure produced
+real bytes that hashed to a real value.
 
 ---
 
@@ -79,10 +88,10 @@ backend/                Rust service (Axum)
     verify_real_blocks.rs   Integration tests against live blocks
 
 src/
-  core/                 Pure trie logic (no DOM)
-    mpt.js              JS MPT used by Custom mode
-    nodes.js, utils.js  Node types + hex helpers
-    stats.js            countNodes() shared by tests and UI
+  core/                 Test-only in-memory MPT (lets layout/stats tests
+                        construct trie shapes without booting the backend)
+    mpt.js, nodes.js, utils.js
+    stats.js            countNodes() — used by UI and tests
   visualization/        d3/SVG rendering
     Renderer.js         Pan/zoom, layout selection, level-of-detail
     LayoutEngine.js     Top-down tidy tree (default for small tries)
@@ -92,12 +101,11 @@ src/
     config.js
   ui/                   Orchestration
     App.js              Boots everything, wires the page
-    MPTVisualizer.js    Wraps renderer + MPT
-    EthereumService.js  Talks to the Rust backend
+    MPTVisualizer.js    Tracks state, delegates trie construction to backend
+    EthereumService.js  HTTP client for the Rust backend (block + build)
     examples.js         Preset key/value sets shown as chips
 
 tests/                  Frontend test suite (node --test)
-tools/                  Python helpers (Ethereum trie spec reference + fixture generator)
 index.html              Page shell
 ```
 
