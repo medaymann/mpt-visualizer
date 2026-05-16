@@ -3,23 +3,30 @@ import { CONFIG } from './config.js';
 /**
  * RadialLayout
  *
- * Concentric-ring layout for wide, shallow tries:
- *   - Root sits at the origin (0, 0).
- *   - Each subsequent depth becomes a ring at radius `ringGap * level`.
- *   - Each subtree gets an angular wedge proportional to its leaf count.
- *   - A node is centered on its wedge midpoint at its ring's radius.
+ * Concentric-ring layout that adapts to actual fan-out instead of just to
+ * leaf count. The key trick is that a node placed at radius r with width w
+ * occupies an angular arc of (w + gap) / r — so densely-populated inner
+ * rings need a wider ring spacing than sparse outer ones.
  *
- * Reports rectangular positions (top-left of an axis-aligned card) so the
- * existing visual classes render unchanged. The Renderer separately reads
- * the polar metadata to anchor edges along the correct radial direction.
+ * Algorithm:
+ *   1. Recursively compute each subtree's *minimum angular need* — the
+ *      smallest wedge it can fit into without overlapping nodes, given a
+ *      candidate ringGap.
+ *   2. If the root's children together need more than ~2π, scale ringGap up
+ *      proportionally. Angular need scales linearly with 1/r, so doubling
+ *      ringGap halves the total need.
+ *   3. Place each subtree at the centre of its allocated wedge.
  */
 export class RadialLayout {
     constructor() {
-        // Tuned for MPT shape: branches at ~520px wide, leaves at ~280px wide.
-        // Use a generous radial step so cards on adjacent rings don't crowd.
-        this.ringGap = 360;
-        // Minimum angular slot per leaf (radians). Smaller = denser packing.
-        this.minLeafAngle = (2 * Math.PI) / 80;
+        // Initial ring spacing; the algorithm will grow this if any ring needs
+        // more space to fit its fan-out without overlap.
+        this.baseRingGap = 360;
+        // Minimum tangential gap between sibling nodes (px).
+        this.tangentialGap = 30;
+        // Fraction of 2π we're willing to use (leave a sliver so the diagram
+        // doesn't quite close on itself; reads better visually).
+        this.maxAngularBudget = 2 * Math.PI * 0.95;
     }
 
     nodeWidth(mptNode) {
@@ -38,7 +45,6 @@ export class RadialLayout {
     buildTreeStructure(mptRoot) {
         const root = { node: mptRoot, children: [], level: 0, parentSlot: null };
         this._traverse(mptRoot, root, 0);
-        this._countLeaves(root);
         return root;
     }
 
@@ -61,30 +67,23 @@ export class RadialLayout {
         }
     }
 
-    _countLeaves(treeNode) {
-        if (treeNode.children.length === 0) {
-            treeNode.leafCount = 1;
-            return 1;
-        }
-        let n = 0;
-        for (const c of treeNode.children) n += this._countLeaves(c);
-        treeNode.leafCount = n;
-        return n;
-    }
-
     /**
      * Returns:
-     *   positions: Map<mptNode, { x, y, width, polar: { r, angle } }>
+     *   positions: Map<mptNode, { x, y, width, height, polar: { r, angle } }>
      *   bbox:      { minX, minY, maxX, maxY }
      */
     calculateLayout(tree) {
+        // First, decide ringGap. Try the base value, then scale up if the
+        // root's children together demand more angle than we have.
+        let ringGap = this.baseRingGap;
+        const need = this._subtreeNeed(tree, ringGap);
+        if (need > this.maxAngularBudget) {
+            ringGap *= need / this.maxAngularBudget;
+        }
+
         const positions = new Map();
 
-        // Total angular budget. For large leaf counts, expand to a full circle;
-        // for tiny tries, use a narrower fan so the layout doesn't look silly.
-        const baseAngle = Math.min(2 * Math.PI, Math.max(this.minLeafAngle * tree.leafCount, Math.PI));
-
-        // Place root at origin (no polar position).
+        // Place root at origin.
         const rootW = this.nodeWidth(tree.node);
         const rootH = this.nodeHeight(tree.node);
         positions.set(tree.node, {
@@ -92,13 +91,19 @@ export class RadialLayout {
             y: -rootH / 2,
             width: rootW,
             height: rootH,
-            polar: { r: 0, angle: -Math.PI / 2 } // pointing "up" (toward children at top)
+            polar: { r: 0, angle: -Math.PI / 2 }
         });
 
-        // Root's children fan around `startAngle` (top of the diagram by convention).
-        // We aim from `-PI/2 - baseAngle/2` to `-PI/2 + baseAngle/2`.
-        const start = -Math.PI / 2 - baseAngle / 2;
-        this._place(tree, positions, start, baseAngle, 1);
+        // The root's children fan around the top of the diagram.
+        // Use as much of the angular budget as the subtree actually needs;
+        // for tiny tries this naturally produces a tighter fan.
+        const totalNeed = tree.children.reduce(
+            (s, c) => s + this._subtreeNeed(c, ringGap), 0
+        );
+        const span = Math.min(totalNeed, this.maxAngularBudget);
+        const start = -Math.PI / 2 - span / 2;
+
+        this._place(tree, positions, start, span, 1, ringGap);
 
         // Bounding box
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -109,21 +114,53 @@ export class RadialLayout {
             maxY = Math.max(maxY, p.y + p.height);
         });
 
-        return { positions, bbox: { minX, minY, maxX, maxY: maxY } };
+        return { positions, bbox: { minX, minY, maxX, maxY } };
+    }
+
+    /**
+     * Minimum angular wedge this subtree needs in order to lay out without
+     * any of its descendants overlapping. Computed for the *node itself* on
+     * a ring of radius `r` and recursively for its children at the next ring.
+     */
+    _subtreeNeed(treeNode, ringGap) {
+        // For the root (level 0, no radius), we still want a sensible answer
+        // for sizing children. The root itself doesn't need angular space —
+        // it sits at the origin.
+        const myR = treeNode.level === 0 ? 0 : treeNode.level * ringGap;
+        const myAngle = myR === 0
+            ? 0
+            : (this.nodeWidth(treeNode.node) + this.tangentialGap) / myR;
+
+        if (treeNode.children.length === 0) {
+            return myAngle;
+        }
+        let childrenAngle = 0;
+        for (const c of treeNode.children) {
+            childrenAngle += this._subtreeNeed(c, ringGap);
+        }
+        return Math.max(myAngle, childrenAngle);
     }
 
     /**
      * Distribute `treeNode.children` across the wedge [startAngle, startAngle+span]
-     * at radius `level * ringGap`.
+     * at radius `level * ringGap`, proportionally to each child's angular need.
      */
-    _place(treeNode, positions, startAngle, span, level) {
+    _place(treeNode, positions, startAngle, span, level, ringGap) {
         if (treeNode.children.length === 0) return;
-        const r = level * this.ringGap;
-        const totalLeaves = treeNode.children.reduce((s, c) => s + c.leafCount, 0);
-        let cursor = startAngle;
+        const r = level * ringGap;
 
-        for (const child of treeNode.children) {
-            const childSpan = span * (child.leafCount / totalLeaves);
+        const needs = treeNode.children.map(c => this._subtreeNeed(c, ringGap));
+        const totalNeed = needs.reduce((s, n) => s + n, 0);
+        // Distribute the parent's allocated span proportionally to each
+        // child's minimum need. If `totalNeed > span` (can happen at deeply
+        // crowded inner levels even after scaling — rare), we just use the
+        // raw shares and let the layout overflow gracefully.
+        const scale = totalNeed > 0 ? span / totalNeed : 0;
+
+        let cursor = startAngle;
+        for (let i = 0; i < treeNode.children.length; i++) {
+            const child = treeNode.children[i];
+            const childSpan = needs[i] * scale;
             const angle = cursor + childSpan / 2;
             const w = this.nodeWidth(child.node);
             const h = this.nodeHeight(child.node);
@@ -136,7 +173,7 @@ export class RadialLayout {
                 height: h,
                 polar: { r, angle }
             });
-            this._place(child, positions, cursor, childSpan, level + 1);
+            this._place(child, positions, cursor, childSpan, level + 1, ringGap);
             cursor += childSpan;
         }
     }
