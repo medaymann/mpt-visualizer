@@ -51,7 +51,7 @@ must be running.
 ## Testing
 
 ```bash
-npm test                  # 40 frontend tests (layout, stats, rlp/block-id helpers)
+npm test                  # 12 frontend tests (rlp + block-id helpers)
 npm run backend:test      # 12 backend unit tests (rlp, mpt, rpc)
 npm run backend:verify    # 6 integration tests fetching real blocks and asserting root match
 ```
@@ -120,10 +120,7 @@ backend/                Rust service (Axum)
     verify_real_blocks.rs   Integration tests against live blocks
 
 src/
-  core/                 Test-only in-memory MPT (lets layout/stats tests
-                        construct trie shapes without booting the backend)
-    mpt.js, nodes.js, utils.js
-    stats.js            countNodes() — used by UI and tests
+  styles.css            Page styles (extracted from inline <style>)
   visualization/        d3/SVG rendering
     Renderer.js         Pan/zoom, drag, layout selection, level-of-detail,
                         path highlight, layout-switch animation
@@ -136,6 +133,7 @@ src/
     App.js              Boots everything, wires the page
     MPTVisualizer.js    Tracks state, delegates trie construction to backend
     EthereumService.js  HTTP client for the Rust backend
+    stats.js            countNodes() for the sidebar stats panel
     examples.js         Preset key/value sets shown as chips
     recentBlocks.js     localStorage-backed history of recently loaded blocks
 

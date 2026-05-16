@@ -1,6 +1,6 @@
 import { Renderer } from '../visualization/Renderer.js';
 import { EthereumService } from './EthereumService.js';
-import { countNodes } from '../core/stats.js';
+import { countNodes } from './stats.js';
 
 /**
  * MPTVisualizer
