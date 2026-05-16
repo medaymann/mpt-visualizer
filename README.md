@@ -84,9 +84,8 @@ always backed by canonical RLP + keccak.
 **Custom mode** (`POST /api/trie/build`)
 
 Same trie engine, fed by arbitrary hex-keyed entries. The keccak root
-is returned and shown next to the structure — useful as a sanity
-signal that the structure on screen came from real bytes that hashed
-to a real value.
+is returned and displayed, but there's nothing external to verify it
+against — it's just the computed hash, not a proof of anything.
 
 ---
 

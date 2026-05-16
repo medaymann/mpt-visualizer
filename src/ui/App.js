@@ -220,7 +220,7 @@ export function boot() {
             if (r) {
                 rootEl.innerHTML =
                     `<div><span class="k">root</span> ${r}</div>` +
-                    `<div style="margin-top:4px"><span style="color:var(--ok)">✓ keccak-verified by backend</span></div>`;
+                    `<div style="margin-top:4px"><span style="color:var(--text-dim)">computed by backend (nothing external to verify against)</span></div>`;
                 rootEl.style.display = 'block';
             } else {
                 rootEl.style.display = 'none';
