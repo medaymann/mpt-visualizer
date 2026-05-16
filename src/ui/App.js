@@ -151,9 +151,11 @@ export function boot() {
         const badge = verified
             ? `<span style="color:var(--ok)">✓ computed root matches block.transactionsRoot</span>`
             : `<span style="color:var(--danger)">✗ root mismatch — trie may be wrong</span>`;
+        const numberLink = `<a href="https://etherscan.io/block/${m.number}" target="_blank" rel="noopener noreferrer">#${m.number}</a>`;
+        const hashLink = `<a href="https://etherscan.io/block/${m.hash}" target="_blank" rel="noopener noreferrer">${m.hash}</a>`;
         el.innerHTML =
-            `<div><span class="k">block</span> #${m.number}</div>` +
-            `<div><span class="k">hash</span> ${m.hash}</div>` +
+            `<div><span class="k">block</span> ${numberLink}</div>` +
+            `<div><span class="k">hash</span> ${hashLink}</div>` +
             `<div><span class="k">txs</span> ${m.txCount}</div>` +
             `<div><span class="k">gasUsed</span> ${m.gasUsed.toLocaleString()}</div>` +
             `<div><span class="k">time</span> ${ts} UTC</div>` +
