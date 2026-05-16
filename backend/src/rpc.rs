@@ -1,8 +1,14 @@
-//! JSON-RPC client with public-endpoint failover.
+//! JSON-RPC client with hedged requests across public endpoints.
+//!
+//! We fire the same request to every endpoint in parallel and return the
+//! first successful response. Slow or unresponsive endpoints no longer block
+//! the user — the others race ahead. Losers' futures are dropped when this
+//! function returns, which cancels their in-flight reqwest calls.
 
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tokio::task::JoinSet;
 
 const ENDPOINTS: &[&str] = &[
     "https://eth.llamarpc.com",
@@ -24,28 +30,45 @@ struct RpcError {
     message: String,
 }
 
+async fn try_endpoint(
+    client: reqwest::Client,
+    url: &'static str,
+    body: Value,
+) -> Result<Value> {
+    let resp = client.post(url).json(&body).send().await
+        .map_err(|e| anyhow!("Network error from {url}: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(anyhow!("HTTP {} from {url}", resp.status()));
+    }
+    let rpc: RpcResponse = resp.json().await
+        .map_err(|e| anyhow!("Parse error from {url}: {e}"))?;
+    if let Some(err) = rpc.error {
+        return Err(anyhow!("RPC error from {url}: {}", err.message));
+    }
+    rpc.result.ok_or_else(|| anyhow!("Empty result from {url}"))
+}
+
 pub async fn call(client: &reqwest::Client, method: &str, params: Value) -> Result<Value> {
     let body = json!({ "jsonrpc": "2.0", "id": 1, "method": method, "params": params });
-    let mut last_err: Option<anyhow::Error> = None;
+
+    let mut set = JoinSet::new();
     for url in ENDPOINTS {
-        match client.post(*url).json(&body).send().await {
-            Ok(resp) if resp.status().is_success() => {
-                match resp.json::<RpcResponse>().await {
-                    Ok(rpc) => {
-                        if let Some(err) = rpc.error {
-                            last_err = Some(anyhow!("RPC error from {url}: {}", err.message));
-                            continue;
-                        }
-                        if let Some(v) = rpc.result {
-                            return Ok(v);
-                        }
-                        last_err = Some(anyhow!("Empty result from {url}"));
-                    }
-                    Err(e) => last_err = Some(anyhow!("Parse error from {url}: {e}")),
-                }
+        let client = client.clone();
+        let body = body.clone();
+        set.spawn(async move { try_endpoint(client, url, body).await });
+    }
+
+    let mut last_err: Option<anyhow::Error> = None;
+    while let Some(res) = set.join_next().await {
+        match res {
+            Ok(Ok(value)) => {
+                // First success wins; abort the rest so they don't keep sucking bandwidth.
+                set.abort_all();
+                return Ok(value);
             }
-            Ok(resp) => last_err = Some(anyhow!("HTTP {} from {url}", resp.status())),
-            Err(e) => last_err = Some(anyhow!("Network error from {url}: {e}")),
+            Ok(Err(e)) => last_err = Some(e),
+            Err(e) if e.is_cancelled() => {} // ignore aborted siblings
+            Err(e) => last_err = Some(anyhow!("task error: {e}")),
         }
     }
     Err(last_err.unwrap_or_else(|| anyhow!("All endpoints failed")))
