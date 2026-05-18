@@ -1,6 +1,2 @@
-node_modules/
 .venv/
-tests/__pycache__/
-*.pyc
-.DS_Store
 backend/target/

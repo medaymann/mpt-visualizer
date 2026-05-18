@@ -1,5 +1,7 @@
 # MPT Visualizer
 
+[![tests](https://github.com/medaymann/mpt-visualizer/actions/workflows/test.yml/badge.svg)](https://github.com/medaymann/mpt-visualizer/actions/workflows/test.yml)
+
 An interactive Merkle Patricia Trie explorer with two modes:
 
 - **Custom** — build a trie from your own hex-keyed entries and watch
