@@ -13,6 +13,18 @@ against the on-chain root.
 
 ---
 
+## Screenshots
+
+**Custom mode** — small trie built from hand-entered hex keys.
+
+![Custom mode](assets/custom-mode.png)
+
+**Ethereum block mode** — transactions trie for block 7,777,777, verified against the on-chain root.
+
+![Ethereum block mode](assets/ethereum-mode.png)
+
+---
+
 ## Running
 
 You need both the **Rust backend** and a **static server** for the
