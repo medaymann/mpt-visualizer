@@ -17,11 +17,11 @@ against the on-chain root.
 
 **Custom mode** — small trie built from hand-entered hex keys.
 
-![Custom mode](assets/custom-mode.png)
+<img src="assets/custom-mode.png" alt="Custom mode" width="600">
 
 **Ethereum block mode** — transactions trie for block 7,777,777, verified against the on-chain root.
 
-![Ethereum block mode](assets/ethereum-mode.png)
+<img src="assets/ethereum-mode.png" alt="Ethereum block mode" width="600">
 
 ---
 
