@@ -211,17 +211,24 @@ pub fn root_hash(node: &Node) -> [u8; 32] {
 #[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ViewNode {
-    Leaf { path: String, value: String },
-    Extension { path: String, child: Box<ViewNode> },
+    Leaf { path: String, value: String, hash: String },
+    Extension { path: String, child: Box<ViewNode>, hash: String },
     Branch {
         children: Vec<Option<ViewNode>>, // length 16
         #[serde(skip_serializing_if = "Option::is_none")]
         value: Option<String>,
+        hash: String,
     },
 }
 
 fn nibbles_to_hex(nibbles: &[u8]) -> String {
     nibbles.iter().map(|n| format!("{:x}", n)).collect()
+}
+
+/// keccak hash of a node's RLP, hex-encoded (no 0x prefix). This is the value a
+/// parent would store as its reference if the node were hash-referenced.
+fn node_hash(node: &Node) -> String {
+    hex::encode(keccak256(&rlp_of_node(node)))
 }
 
 /// Convert internal Node → ViewNode. `value_render(raw_value_bytes)` lets the
@@ -235,13 +242,15 @@ where
         Node::Leaf { path, value } => Some(ViewNode::Leaf {
             path: nibbles_to_hex(path),
             value: value_render(value),
+            hash: node_hash(node),
         }),
         Node::Extension { path, child } => {
             let child_view = to_view(child, value_render)
-                .unwrap_or(ViewNode::Leaf { path: String::new(), value: String::new() });
+                .unwrap_or(ViewNode::Leaf { path: String::new(), value: String::new(), hash: String::new() });
             Some(ViewNode::Extension {
                 path: nibbles_to_hex(path),
                 child: Box::new(child_view),
+                hash: node_hash(node),
             })
         }
         Node::Branch { children, value } => {
@@ -252,6 +261,7 @@ where
             Some(ViewNode::Branch {
                 children: kids,
                 value: value.as_ref().map(|v| value_render(v)),
+                hash: node_hash(node),
             })
         }
     }

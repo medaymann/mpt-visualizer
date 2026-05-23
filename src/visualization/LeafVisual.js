@@ -74,6 +74,7 @@ export class LeafVisual extends VisualNode {
             g.append("title").text(`key-end: ${keyHex}\nvalue: ${valueStr}`);
         }
 
+        this.appendHashBadge(g);
         return g;
     }
 }

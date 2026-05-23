@@ -1,6 +1,7 @@
 import { BranchVisual } from './BranchVisual.js';
 import { ExtensionVisual } from './ExtensionVisual.js';
 import { LeafVisual } from './LeafVisual.js';
+import { VisualNode } from './VisualNode.js';
 import { ConnectionManager } from './ConnectionManager.js';
 import { LayoutEngine } from './LayoutEngine.js';
 import { RadialLayout } from './RadialLayout.js';
@@ -54,6 +55,7 @@ export class Renderer {
         this._connByPair = new Map();      // `${parentId}|${childId}` -> connection record
         this._activeLeaf = null;
         this.onLeafHighlight = null;       // optional callback(entryKey | null)
+        this._showHashes = false;
 
         // Pan/zoom: coalesce events to one transform write per animation frame.
         // d3.zoom fires per wheel tick, which can be 100+/s on trackpads; writing
@@ -135,6 +137,18 @@ export class Renderer {
         return new LeafVisual(id, mptNode);
     }
 
+    /** Set the callback fired when any hash label is clicked. */
+    setOnHashClick(fn) { VisualNode.onHashClick = fn; }
+
+    setShowHashes(on) {
+        this._showHashes = on;
+        this.world.classed('show-hashes', on);
+        // Some visuals (extension) change their edge anchor when hashes show,
+        // so push the flag down and recompute edge paths.
+        this.visualNodes.forEach(v => { v.showHashes = on; });
+        this.connectionManager.updateAll();
+    }
+
     setLayoutMode(mode) {
         // mode: 'auto' | 'tree' | 'radial'
         const prevMode = this.layoutMode;
@@ -208,6 +222,9 @@ export class Renderer {
             treeNode.children.forEach(child => {
                 const childVis = this.visualNodes.get(child.node);
                 const childPos = positions.get(child.node);
+                // The child hash now lives inside the parent (branch slot box or
+                // extension value anchor), so no edge label is needed.
+                const childHash = null;
                 let conn;
                 if (mode === 'radial') {
                     const polar = {
@@ -224,9 +241,9 @@ export class Renderer {
                             angle: childPos.polar.angle
                         }
                     };
-                    conn = this.connectionManager.addConnection(parentVis, childVis, child.parentSlot, 'radial', polar);
+                    conn = this.connectionManager.addConnection(parentVis, childVis, child.parentSlot, 'radial', polar, childHash);
                 } else {
-                    conn = this.connectionManager.addConnection(parentVis, childVis, child.parentSlot);
+                    conn = this.connectionManager.addConnection(parentVis, childVis, child.parentSlot, 'tree', null, childHash);
                 }
                 this._parentByChild.set(child.node, treeNode.node);
                 this._connByPair.set(`${parentVis.id}|${childVis.id}`, conn);
@@ -369,6 +386,7 @@ export class Renderer {
     _addVisualAt(entry, i) {
         const [mptNode, pos] = entry;
         const visual = this.createVisualNode(mptNode, `n${i}`);
+        visual.showHashes = this._showHashes;
         visual.setPosition(pos.x, pos.y);
         visual.render(this.world);
         this.visualNodes.set(mptNode, visual);

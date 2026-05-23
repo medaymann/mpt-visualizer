@@ -32,7 +32,10 @@ export const CONFIG = {
     connection: {
         color: '#7aa7d9',
         width: 2,
-        activeColor: '#f5a623'
+        activeColor: '#f5a623',
+        hashColor: '#e0863a',     // reference pointers (edge labels, child-hash)
+        hashColorDark: '#a85e1f', // darker orange for hashes on light/gold fills
+        idHashFill: '#2a1c0a'     // pill background behind a node's own hash
     },
     canvas: {
         background: '#0f1620',

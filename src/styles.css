@@ -136,6 +136,7 @@ button.ghost {
     border-color: var(--border);
 }
 button.ghost:hover { color: var(--text); border-color: var(--accent); }
+button.ghost.active { color: #1a1206; background: #e0863a; border-color: #e0863a; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-row { display: flex; gap: 8px; margin-top: 12px; }
 .btn-row button { flex: 1; }
@@ -307,6 +308,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .world.low-detail .detail { display: none; }
 .world.low-detail .low-detail-only { display: inline; }
 
+/* Hash references — hidden until 'Show hashes' toggle adds .show-hashes */
+.world .hash-badge { display: none; }
+.world .hash-edge-label { display: none; }
+.world.show-hashes .hash-badge { display: inline; }
+.world.show-hashes .hash-edge-label { display: inline; }
+
 /* Path-highlight mode: dim non-active nodes & edges so the chain stands out */
 .world.path-mode .mpt-node:not([data-active="true"]) { opacity: 0.18; }
 .world.path-mode .connections-layer path:not([data-active="true"]) { opacity: 0.12; }
@@ -386,6 +393,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     border: 1px solid var(--border);
     border-radius: 6px;
     display: none;
+    max-width: 340px;
+    word-break: break-all;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
 }
 .status.show { display: block; }
 .status.error { color: var(--danger); border-color: var(--danger); }

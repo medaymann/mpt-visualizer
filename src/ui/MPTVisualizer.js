@@ -65,11 +65,30 @@ export class MPTVisualizer {
             const { root, computedRoot } = await this.service.buildTrie(snapshot);
             this.root = root;
             this.computedRoot = computedRoot;
+            // The backend left-pads odd-length hex keys with a leading zero
+            // before building, so a leaf's reconstructed entryKey may not match
+            // the key the user typed (e.g. "abcd1" -> "0abcd1"). Re-map each
+            // leaf's entryKey back to the actual DB key so highlight sync works.
+            this._reconcileLeafKeys(this.root, Object.keys(snapshot));
             this.render();
             if (this._onChange) this._onChange();
         } finally {
             this._rebuildPending = false;
         }
+    }
+
+    _reconcileLeafKeys(node, dbKeys) {
+        if (!node) return;
+        if (node.type === 'leaf') {
+            if (!dbKeys.includes(node.entryKey)) {
+                const stripped = node.entryKey.replace(/^0+/, '');
+                const match = dbKeys.find(k => k === stripped || k.replace(/^0+/, '') === stripped);
+                if (match) node.entryKey = match;
+            }
+            return;
+        }
+        if (node.type === 'extension') return this._reconcileLeafKeys(node.child, dbKeys);
+        if (node.type === 'branch') node.children.forEach(c => this._reconcileLeafKeys(c, dbKeys));
     }
 
     // --- Ethereum / setRoot path --------------------------------------------
@@ -107,6 +126,8 @@ export class MPTVisualizer {
 
     resetView() { this.renderer.resetView(); }
     setLayoutMode(mode) { this.renderer.setLayoutMode(mode); }
+    setShowHashes(on) { this.renderer.setShowHashes(on); }
+    onHashClick(fn) { this.renderer.setOnHashClick(fn); }
     handleResize() { this.renderer.handleResize(); }
     render() { this.renderer.render(this.root); }
 

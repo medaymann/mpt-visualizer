@@ -69,6 +69,7 @@ function viewToMpt(view, prefixNibbles = []) {
             restOfKey: restNibbles,
             value: view.value,
             entryKey,
+            hash: view.hash ?? null,
         };
     }
     if (view.type === 'extension') {
@@ -77,6 +78,7 @@ function viewToMpt(view, prefixNibbles = []) {
             type: 'extension',
             keySegment: segNibbles,
             child: viewToMpt(view.child, prefixNibbles.concat(segNibbles)),
+            hash: view.hash ?? null,
         };
     }
     // branch
@@ -88,6 +90,7 @@ function viewToMpt(view, prefixNibbles = []) {
         type: 'branch',
         children,
         value: view.value ?? null,
+        hash: view.hash ?? null,
     };
 }
 

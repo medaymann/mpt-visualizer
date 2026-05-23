@@ -278,7 +278,6 @@ export function boot() {
 
     // --- Canvas controls -------------------------------------------------
     document.getElementById('fitButton').addEventListener('click', () => viz.render());
-    document.getElementById('resetButton').addEventListener('click', () => viz.resetView());
 
     document.getElementById('layoutToggle').addEventListener('click', e => {
         const btn = e.target.closest('button[data-mode]');
@@ -286,6 +285,20 @@ export function boot() {
         document.querySelectorAll('#layoutToggle button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         viz.setLayoutMode(btn.dataset.mode);
+    });
+
+    const hashToggle = document.getElementById('hashToggle');
+    let showHashes = false;
+    hashToggle.addEventListener('click', () => {
+        showHashes = !showHashes;
+        viz.setShowHashes(showHashes);
+        hashToggle.classList.toggle('active', showHashes);
+        hashToggle.textContent = showHashes ? 'Hide hashes' : 'Show hashes';
+    });
+
+    // Clicking any hash label shows the full keccak hash in the status toast.
+    viz.onHashClick(fullHash => {
+        showStatus('keccak: 0x' + fullHash, 'info', true);
     });
 
     // --- DB toggle -------------------------------------------------------

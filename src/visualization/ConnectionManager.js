@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { shortHash, makeHashClickable } from './VisualNode.js';
 
 /**
  * ConnectionManager
@@ -22,7 +23,7 @@ export class ConnectionManager {
      * @param mode     'tree' (default) or 'radial'
      * @param polar    optional { from: {x,y,r,angle}, to: {x,y,r,angle} } — required for radial
      */
-    addConnection(fromNode, toNode, fromSlot = null, mode = 'tree', polar = null) {
+    addConnection(fromNode, toNode, fromSlot = null, mode = 'tree', polar = null, hashRef = null) {
         const path = this.layer.append("path")
             .attr("fill", "none")
             .attr("stroke", CONFIG.connection.color)
@@ -42,7 +43,22 @@ export class ConnectionManager {
                 .text(fromSlot.toString(16));
         }
 
-        const conn = { path, label, fromNode, toNode, fromSlot, mode, polar };
+        // Hash-reference label, hidden unless .world has the 'show-hashes' class.
+        // Sits near the child end of the edge: "parent stores this hash to reach here".
+        let hashLabel = null;
+        if (hashRef) {
+            hashLabel = this.layer.append("text")
+                .attr("class", "hash-edge-label")
+                .attr("font-family", "monospace")
+                .attr("font-size", "10px")
+                .attr("font-weight", 600)
+                .attr("fill", CONFIG.connection.hashColor)
+                .attr("text-anchor", "middle")
+                .text(shortHash(hashRef));
+            makeHashClickable(hashLabel, hashRef);
+        }
+
+        const conn = { path, label, hashLabel, fromNode, toNode, fromSlot, mode, polar };
         this.connections.push(conn);
         this.updateConnection(conn);
         return conn;
@@ -64,6 +80,12 @@ export class ConnectionManager {
         const c2y = start.y + dy * 0.5;
         conn.path.attr("d", `M ${start.x},${start.y} C ${start.x},${c1y} ${end.x},${c2y} ${end.x},${end.y}`);
         if (conn.label) conn.label.attr("x", start.x).attr("y", start.y + 14);
+        if (conn.hashLabel) {
+            // ~65% toward the child, just above its top edge.
+            const hx = start.x + (end.x - start.x) * 0.65;
+            const hy = start.y + (end.y - start.y) * 0.65;
+            conn.hashLabel.attr("x", hx).attr("y", hy);
+        }
     }
 
     _updateRadial(conn) {
@@ -105,6 +127,11 @@ export class ConnectionManager {
 
         conn.path.attr("d", `M ${start.x},${start.y} Q ${cx},${cy} ${end.x},${end.y}`);
         if (conn.label) conn.label.attr("x", (start.x + cx) / 2).attr("y", (start.y + cy) / 2);
+        if (conn.hashLabel) {
+            const hx = (cx + end.x) / 2;
+            const hy = (cy + end.y) / 2;
+            conn.hashLabel.attr("x", hx).attr("y", hy);
+        }
     }
 
     updateAll() {
