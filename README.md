@@ -19,9 +19,10 @@ test suite locks the two together.
 
 ## Live demo
 
-The hosted build runs **custom mode** with zero setup. Ethereum mode is
-disabled there (it needs the backend) — clone and run the backend
-locally to load and verify real blocks (see [Running](#running)).
+**<https://medaymann.github.io/mpt-visualizer/>** — custom mode, no setup.
+
+Ethereum mode needs the backend, so it's only available when running
+locally (see [Running](#running)).
 
 ---
 
@@ -73,21 +74,6 @@ before the app boots:
 
 When no backend is configured (a plain static host), the Ethereum tab
 is disabled and explains how to enable it; custom mode keeps working.
-
----
-
-## Deploying (custom mode)
-
-The frontend is plain static files (ES modules, relative paths, d3 from a
-CDN) — no build step. Custom mode works anywhere static files are served.
-
-- **GitHub Pages** — enable Pages on the repo root (or `/docs`). The
-  included `.nojekyll` keeps Pages from filtering files.
-- **Vercel** — import the repo; `vercel.json` declares no build and serves
-  the root.
-
-Ethereum mode stays disabled on these hosts unless you set
-`window.MPT_BACKEND` to a reachable backend.
 
 ---
 
