@@ -73,8 +73,6 @@ html, body {
     background: var(--panel-2);
 }
 .tab:hover:not(.active) { color: var(--text); }
-.tab.disabled { opacity: 0.45; cursor: not-allowed; }
-.tab.disabled:hover { color: var(--text-dim); }
 
 .eth-disabled-note {
     margin: 14px 0 4px;

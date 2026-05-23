@@ -15,20 +15,10 @@
 
 import { buildTrieResponse } from '../engine/mpt.js';
 
+// Ethereum mode targets this backend. Override via window.MPT_BACKEND; defaults
+// to the local dev backend. If it isn't running, getBlock surfaces a clear
+// "can't reach backend" error.
 const BACKEND_BASE = (typeof window !== 'undefined' && window.MPT_BACKEND) || 'http://localhost:8081';
-
-/**
- * Whether Ethereum-block mode is available. True when a backend URL is
- * explicitly configured (window.MPT_BACKEND) OR when running on localhost
- * (the dev setup runs the Rust backend on :8081). On a static host with no
- * MPT_BACKEND, this is false and the Ethereum tab is disabled.
- */
-export const HAS_BACKEND = (() => {
-    if (typeof window === 'undefined') return false;
-    if (window.MPT_BACKEND) return true;
-    const h = window.location && window.location.hostname;
-    return h === 'localhost' || h === '127.0.0.1' || h === '';
-})();
 
 // --- pure helpers kept for tests ---------------------------------------------
 

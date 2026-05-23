@@ -8,7 +8,7 @@
  */
 
 import { MPTVisualizer } from './MPTVisualizer.js';
-import { EthereumService, HAS_BACKEND } from './EthereumService.js';
+import { EthereumService } from './EthereumService.js';
 import { CUSTOM_EXAMPLES, ETH_EXAMPLES } from './examples.js';
 import * as recentBlocks from './recentBlocks.js';
 
@@ -39,23 +39,12 @@ export function boot() {
     // --- Tabs ------------------------------------------------------------
     const dbPanel = document.getElementById('db-panel');
     const tabs = document.querySelectorAll('.tab');
-    const ethTab = document.querySelector('.tab[data-mode="ethereum"]');
 
-    // Ethereum mode needs the backend. On a static deploy (no MPT_BACKEND),
-    // disable the tab and explain how to enable it.
-    if (!HAS_BACKEND) {
-        ethTab.classList.add('disabled');
-        ethTab.title = 'Needs the local Rust backend — see the README to enable Ethereum mode.';
-        const note = document.getElementById('ethDisabledNote');
-        if (note) note.hidden = false;
-    }
-
+    // Ethereum mode is always clickable. It calls the backend on load; if the
+    // backend isn't running, the load shows a "can't reach backend" message.
+    // The in-panel note tells users they need it running.
     tabs.forEach(t => t.addEventListener('click', () => {
         const mode = t.dataset.mode;
-        if (mode === 'ethereum' && !HAS_BACKEND) {
-            showStatus('Ethereum mode needs the local backend — see the README.', 'info');
-            return;
-        }
         tabs.forEach(x => x.classList.remove('active'));
         t.classList.add('active');
         document.getElementById('panel-custom').hidden = mode !== 'custom';
