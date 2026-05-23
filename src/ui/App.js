@@ -37,6 +37,7 @@ export function boot() {
     }
 
     // --- Tabs ------------------------------------------------------------
+    const dbPanel = document.getElementById('db-panel');
     const tabs = document.querySelectorAll('.tab');
     tabs.forEach(t => t.addEventListener('click', () => {
         tabs.forEach(x => x.classList.remove('active'));
@@ -44,6 +45,7 @@ export function boot() {
         const mode = t.dataset.mode;
         document.getElementById('panel-custom').hidden = mode !== 'custom';
         document.getElementById('panel-ethereum').hidden = mode !== 'ethereum';
+        dbPanel.hidden = mode !== 'custom';
         viz.clear();
         document.getElementById('blockMeta').style.display = 'none';
         clearStatus();
@@ -205,6 +207,29 @@ export function boot() {
         el.style.display = 'block';
     }
 
+    // --- DB table (custom mode) ------------------------------------------
+    const dbTableBody = document.getElementById('db-table-body');
+    function refreshDB() {
+        const entries = viz.entries;
+        dbTableBody.innerHTML = '';
+        if (Object.keys(entries).length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="2" style="color:var(--text-dim);text-align:center;padding:16px">Empty</td>`;
+            dbTableBody.appendChild(tr);
+            return;
+        }
+        for (const [k, v] of Object.entries(entries)) {
+            const tr = document.createElement('tr');
+            const td1 = document.createElement('td');
+            td1.textContent = k;
+            const td2 = document.createElement('td');
+            td2.textContent = v;
+            tr.appendChild(td1);
+            tr.appendChild(td2);
+            dbTableBody.appendChild(tr);
+        }
+    }
+
     // --- Stats + root ----------------------------------------------------
     function refresh() {
         const s = viz.getStats();
@@ -227,7 +252,7 @@ export function boot() {
             }
         }
     }
-    viz.onChange(refresh);
+    viz.onChange(() => { refresh(); refreshDB(); });
 
     // --- Canvas controls -------------------------------------------------
     document.getElementById('fitButton').addEventListener('click', () => viz.render());
@@ -241,7 +266,21 @@ export function boot() {
         viz.setLayoutMode(btn.dataset.mode);
     });
 
+    // --- DB toggle -------------------------------------------------------
+    const dbToggle = document.getElementById('dbToggle');
+    const dbTableWrap = dbPanel.querySelector('.db-table-wrap');
+    let dbVisible = true;
+    function setDbVisible(visible) {
+        dbVisible = visible;
+        dbTableWrap.hidden = !visible;
+        dbPanel.classList.toggle('collapsed', !visible);
+        dbToggle.classList.toggle('collapsed', !visible);
+        requestAnimationFrame(() => { viz.handleResize(); viz.render(); });
+    }
+    dbToggle.addEventListener('click', () => setDbVisible(!dbVisible));
+
     // --- Boot with the first custom example so the canvas isn't empty ----
+    dbPanel.hidden = false;
     trapError(viz.insertBulk(CUSTOM_EXAMPLES[0].dict));
 
     ['keyInput', 'valueInput'].forEach(id => {

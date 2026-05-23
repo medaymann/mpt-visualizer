@@ -84,6 +84,22 @@
 
         <main class="canvas-wrap">
             <div id="canvas"></div>
+            <div id="db-panel" class="db-panel" hidden>
+                <div class="db-panel-header">
+                    <span>Key/Value Store <span class="db-subtitle">(what a real node writes to LevelDB)</span></span>
+                    <button class="db-collapse-btn" id="dbToggle" title="Collapse">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polyline points="2,4 6,8 10,4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="db-table-wrap">
+                    <table class="db-table">
+                        <thead><tr><th>Key (hex)</th><th>Value</th></tr></thead>
+                        <tbody id="db-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
             <div class="canvas-overlay">
                 <div class="layout-toggle" id="layoutToggle">
                     <button data-mode="auto" class="active">Auto</button>
@@ -93,13 +109,13 @@
                 <button class="secondary" id="fitButton">Fit</button>
                 <button class="ghost" id="resetButton">Reset zoom</button>
             </div>
-            <div class="status" id="status"></div>
             <div class="legend">
                 <div class="legend-item"><span class="legend-swatch" style="background:#5b8fd9"></span> Branch</div>
                 <div class="legend-item"><span class="legend-swatch" style="background:#5fc299"></span> Extension</div>
                 <div class="legend-item"><span class="legend-swatch" style="background:#b07fd9"></span> Leaf</div>
                 <div class="legend-item"><span class="legend-swatch" style="background:#f5a623"></span> Value</div>
             </div>
+            <div class="status" id="status"></div>
         </main>
     </div>
 

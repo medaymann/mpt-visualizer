@@ -84,6 +84,7 @@ export class MPTVisualizer {
 
     resetView() { this.renderer.resetView(); }
     setLayoutMode(mode) { this.renderer.setLayoutMode(mode); }
+    handleResize() { this.renderer.handleResize(); }
     render() { this.renderer.render(this.root); }
 
     getStats() { return countNodes(this.root); }
