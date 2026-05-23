@@ -26,6 +26,9 @@ export class MPTVisualizer {
     /** Notify-on-change hook used by the UI to refresh stats / root display. */
     onChange(fn) { this._onChange = fn; }
 
+    /** Called with entryKey (hex string) when a leaf is highlighted, null when cleared. */
+    onLeafHighlight(fn) { this.renderer.onLeafHighlight = fn; }
+
     // --- Custom mode ---------------------------------------------------------
 
     async insert(key, value) {
@@ -81,6 +84,26 @@ export class MPTVisualizer {
     }
 
     // --- View controls -------------------------------------------------------
+
+    /** Highlight the trie path for a given entry key (hex string). */
+    highlightLeafByKey(key) {
+        const leaf = this._findLeaf(this.root, key);
+        if (leaf) this.renderer.highlightPath(leaf);
+        else this.renderer.clearHighlight();
+    }
+
+    _findLeaf(node, key) {
+        if (!node) return null;
+        if (node.type === 'leaf') return node.entryKey === key ? node : null;
+        if (node.type === 'extension') return this._findLeaf(node.child, key);
+        if (node.type === 'branch') {
+            for (const c of node.children) {
+                const found = this._findLeaf(c, key);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
 
     resetView() { this.renderer.resetView(); }
     setLayoutMode(mode) { this.renderer.setLayoutMode(mode); }

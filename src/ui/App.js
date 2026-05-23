@@ -209,9 +209,19 @@ export function boot() {
 
     // --- DB table (custom mode) ------------------------------------------
     const dbTableBody = document.getElementById('db-table-body');
+    let activeDbKey = null;
+
+    function setDbRowHighlight(key) {
+        activeDbKey = key;
+        dbTableBody.querySelectorAll('tr[data-key]').forEach(tr => {
+            tr.classList.toggle('db-row-active', tr.dataset.key === key);
+        });
+    }
+
     function refreshDB() {
         const entries = viz.entries;
         dbTableBody.innerHTML = '';
+        activeDbKey = null;
         if (Object.keys(entries).length === 0) {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td colspan="2" style="color:var(--text-dim);text-align:center;padding:16px">Empty</td>`;
@@ -220,15 +230,27 @@ export function boot() {
         }
         for (const [k, v] of Object.entries(entries)) {
             const tr = document.createElement('tr');
+            tr.dataset.key = k;
+            tr.style.cursor = 'pointer';
             const td1 = document.createElement('td');
             td1.textContent = k;
             const td2 = document.createElement('td');
             td2.textContent = v;
             tr.appendChild(td1);
             tr.appendChild(td2);
+            tr.addEventListener('click', () => {
+                if (activeDbKey === k) {
+                    viz.renderer.clearHighlight();
+                } else {
+                    viz.highlightLeafByKey(k);
+                    setDbRowHighlight(k);
+                }
+            });
             dbTableBody.appendChild(tr);
         }
     }
+
+    viz.onLeafHighlight(key => setDbRowHighlight(key));
 
     // --- Stats + root ----------------------------------------------------
     function refresh() {

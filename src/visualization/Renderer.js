@@ -53,6 +53,7 @@ export class Renderer {
         this._parentByChild = new Map();   // mptNode (child) -> mptNode (parent)
         this._connByPair = new Map();      // `${parentId}|${childId}` -> connection record
         this._activeLeaf = null;
+        this.onLeafHighlight = null;       // optional callback(entryKey | null)
 
         // Pan/zoom: coalesce events to one transform write per animation frame.
         // d3.zoom fires per wheel tick, which can be 100+/s on trackpads; writing
@@ -277,6 +278,7 @@ export class Renderer {
 
         this.world.classed('path-mode', true);
         this._activeLeaf = leafMptNode;
+        if (this.onLeafHighlight) this.onLeafHighlight(leafMptNode.entryKey ?? null);
     }
 
     clearHighlight() {
@@ -284,6 +286,7 @@ export class Renderer {
         this._clearActiveAttrs();
         this.world.classed('path-mode', false);
         this._activeLeaf = null;
+        if (this.onLeafHighlight) this.onLeafHighlight(null);
     }
 
     _clearActiveAttrs() {

@@ -57,29 +57,37 @@ export function normalizeBlockId(input) {
  * Convert backend ViewNode (tagged JSON) into the in-memory MPT node shape
  * (LeafNode/ExtensionNode/BranchNode) consumed by the Renderer.
  */
-function viewToMpt(view) {
+function viewToMpt(view, prefixNibbles = []) {
     if (!view) return null;
     if (view.type === 'leaf') {
+        const restNibbles = hexToNibbles(view.path);
+        const fullNibbles = prefixNibbles.concat(restNibbles);
+        // Convert nibble array back to hex string (the original entry key).
+        const entryKey = fullNibbles.map(n => n.toString(16)).join('');
         return {
             type: 'leaf',
-            restOfKey: hexToNibbles(view.path),
-            value: view.value
+            restOfKey: restNibbles,
+            value: view.value,
+            entryKey,
         };
     }
     if (view.type === 'extension') {
+        const segNibbles = hexToNibbles(view.path);
         return {
             type: 'extension',
-            keySegment: hexToNibbles(view.path),
-            child: viewToMpt(view.child)
+            keySegment: segNibbles,
+            child: viewToMpt(view.child, prefixNibbles.concat(segNibbles)),
         };
     }
     // branch
     const children = new Array(16).fill(null);
-    (view.children || []).forEach((c, i) => { children[i] = viewToMpt(c); });
+    (view.children || []).forEach((c, i) => {
+        children[i] = viewToMpt(c, prefixNibbles.concat([i]));
+    });
     return {
         type: 'branch',
         children,
-        value: view.value ?? null
+        value: view.value ?? null,
     };
 }
 

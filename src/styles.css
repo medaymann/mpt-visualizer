@@ -299,6 +299,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .db-table td:first-child { color: var(--accent); }
 .db-table td:last-child { color: var(--text-dim); }
 .db-table tr:hover td { background: var(--panel-2); }
+.db-table tr.db-row-active td { background: rgba(245, 166, 35, 0.12); }
+.db-table tr.db-row-active td:first-child { color: var(--accent-2); }
 
 /* Level-of-detail toggles driven by Renderer setting .low-detail on .world */
 .world .low-detail-only { display: none; }
