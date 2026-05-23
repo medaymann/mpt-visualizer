@@ -38,7 +38,7 @@
                 <label>Examples</label>
                 <div class="examples" id="examples"></div>
 
-                <p class="help">Keys are hex (0-9, a-f). The Rust backend computes the trie and its keccak root.</p>
+                <p class="help">Keys are hex (0-9, a-f). The trie and its keccak root are computed in your browser.</p>
 
                 <div class="stats">
                     <div class="stat"><div class="stat-value" id="statLeaves">0</div><div class="stat-label">Leaf</div></div>
@@ -114,11 +114,12 @@
                 <button class="secondary" id="fitButton">Fit</button>
                 <button class="ghost" id="hashToggle" title="Show each node's keccak hash and the hash references between nodes">Show hashes</button>
             </div>
-            <div class="legend">
+            <div class="legend" id="legend">
                 <div class="legend-item"><span class="legend-swatch" style="background:#5b8fd9"></span> Branch</div>
                 <div class="legend-item"><span class="legend-swatch" style="background:#5fc299"></span> Extension</div>
                 <div class="legend-item"><span class="legend-swatch" style="background:#b07fd9"></span> Leaf</div>
                 <div class="legend-item"><span class="legend-swatch" style="background:#f5a623"></span> Value</div>
+                <div class="legend-item legend-hash"><span class="legend-swatch" style="background:var(--hash)"></span> Hash</div>
             </div>
             <div class="status" id="status"></div>
         </main>

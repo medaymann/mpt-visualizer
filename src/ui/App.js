@@ -271,7 +271,7 @@ export function boot() {
             if (r) {
                 rootEl.innerHTML =
                     `<div><span class="k">root</span> ${r}</div>` +
-                    `<div style="margin-top:4px"><span style="color:var(--text-dim)">computed by backend (nothing external to verify against)</span></div>`;
+                    `<div style="margin-top:4px"><span style="color:var(--text-dim)">computed in-browser (nothing external to verify against)</span></div>`;
                 rootEl.style.display = 'block';
             } else {
                 rootEl.style.display = 'none';
@@ -292,12 +292,14 @@ export function boot() {
     });
 
     const hashToggle = document.getElementById('hashToggle');
+    const legend = document.getElementById('legend');
     let showHashes = false;
     hashToggle.addEventListener('click', () => {
         showHashes = !showHashes;
         viz.setShowHashes(showHashes);
         hashToggle.classList.toggle('active', showHashes);
         hashToggle.textContent = showHashes ? 'Hide hashes' : 'Show hashes';
+        legend.classList.toggle('show-hashes', showHashes);
     });
 
     // Clicking any hash label shows the full keccak hash in the status toast.

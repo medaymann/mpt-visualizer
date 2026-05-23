@@ -4,11 +4,16 @@
     --panel-2: #1a2434;
     --border: #243049;
     --accent: #5b8fd9;
+    --accent-hover: #7aa7d9;
     --accent-2: #f5a623;
     --text: #e8f1ff;
     --text-dim: #8aa0bf;
     --danger: #d9534f;
     --ok: #5fc299;
+    /* Hash references in the trie canvas (mirrors config.js connection.hashColor).
+       --on-hash is the dark text used on top of a filled --hash surface. */
+    --hash: #e0863a;
+    --on-hash: #1a1206;
 }
 * { box-sizing: border-box; }
 html, body {
@@ -76,14 +81,29 @@ html, body {
 
 .eth-disabled-note {
     margin: 14px 0 4px;
-    padding: 10px 12px;
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent-2);
+    padding: 10px 12px 10px 34px;
+    position: relative;
+    background: color-mix(in oklab, var(--accent-2) 8%, var(--panel-2));
+    border: 1px solid color-mix(in oklab, var(--accent-2) 35%, var(--border));
     border-radius: 6px;
     font-size: 12px;
     line-height: 1.5;
     color: var(--text-dim);
+}
+.eth-disabled-note::before {
+    content: "!";
+    position: absolute;
+    left: 11px;
+    top: 10px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    color: var(--bg);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
 }
 
 /* --- Panel body & form controls ----------------------------------------- */
@@ -133,9 +153,9 @@ button.primary, button.secondary, button.ghost {
 }
 button.primary {
     background: var(--accent);
-    color: #0a1018;
+    color: var(--bg);
 }
-button.primary:hover { background: #7aa7d9; }
+button.primary:hover { background: var(--accent-hover); }
 button.secondary {
     background: var(--panel-2);
     color: var(--text);
@@ -148,7 +168,7 @@ button.ghost {
     border-color: var(--border);
 }
 button.ghost:hover { color: var(--text); border-color: var(--accent); }
-button.ghost.active { color: #1a1206; background: #e0863a; border-color: #e0863a; }
+button.ghost.active { color: var(--on-hash); background: var(--hash); border-color: var(--hash); }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-row { display: flex; gap: 8px; margin-top: 12px; }
 .btn-row button { flex: 1; }
@@ -373,7 +393,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .layout-toggle button:last-child { border-right: none; }
 .layout-toggle button.active {
     background: var(--accent);
-    color: #0a1018;
+    color: var(--bg);
 }
 .layout-toggle button:hover:not(.active) { color: var(--text); }
 
@@ -393,6 +413,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .legend-item { display: flex; align-items: center; gap: 6px; }
 .legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+/* The Hash entry only applies in "Show hashes" mode. */
+.legend-hash { display: none; }
+.legend.show-hashes .legend-hash { display: flex; }
 
 .status {
     position: absolute;
