@@ -132,6 +132,8 @@ export function boot() {
             const { root, meta, computedRoot, verified } = await eth.getBlock(id);
             viz.setRoot(root, computedRoot);
             renderBlockMeta(meta, computedRoot, verified);
+            // Backend works; the "needs the backend" note is no longer relevant.
+            document.getElementById('ethNote').hidden = true;
             recentBlocks.push(meta.number);
             renderRecent();
             if (meta.txCount === 0) {
