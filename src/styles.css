@@ -90,6 +90,12 @@ html, body {
     line-height: 1.5;
     color: var(--text-dim);
 }
+.eth-disabled-note a {
+    color: inherit;
+    text-decoration: underline;
+    transition: color 0.15s;
+}
+.eth-disabled-note a:hover { color: var(--text); }
 .eth-disabled-note::before {
     content: "!";
     position: absolute;

@@ -53,8 +53,9 @@
             <div class="panel-body" id="panel-ethereum" hidden>
                 <div class="eth-disabled-note" id="ethNote">
                     Ethereum mode needs the Rust backend running locally (see the
-                    README). Start it, then load a block below — if it's not
-                    running you'll get a "can't reach backend" message.
+                    <a href="https://github.com/medaymann/mpt-visualizer#quickstart" target="_blank" rel="noopener noreferrer">README</a>).
+                    Start it, then load a block below — if it's not running
+                    you'll get a "can't reach backend" message.
                 </div>
                 <label>Block number or hash</label>
                 <input type="text" id="blockInput" placeholder='e.g. 18000000, "latest", or 0x...' value="latest" />
@@ -125,7 +126,7 @@
         </main>
     </div>
 
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./vendor/d3.v7.min.js"></script>
     <script type="module">
         import { boot } from './src/ui/App.js';
         boot();

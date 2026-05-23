@@ -1,167 +1,104 @@
+<div align="center">
+
 # MPT Visualizer
 
+<br/>
+
 [![tests](https://github.com/medaymann/mpt-visualizer/actions/workflows/test.yml/badge.svg)](https://github.com/medaymann/mpt-visualizer/actions/workflows/test.yml)
+[![demo](https://img.shields.io/badge/demo-live-3a6ea5)](https://medaymann.github.io/mpt-visualizer/)
 
-An interactive Merkle Patricia Trie explorer with two modes:
+### Interactively build and explore Merkle Patricia Tries<br/>and watch them restructure as you add keys
 
-- **Custom** — build a trie from your own hex-keyed entries and watch
-  how branches, extensions, and leaves form. Runs **entirely in your
-  browser** (JS trie engine), so it works on the static demo with no
-  setup.
-- **Ethereum block** — load any block from Ethereum mainnet, rebuild
-  its transactions trie, and verify the computed root against
-  `block.transactionsRoot` from the block header. This mode needs the
-  **Rust backend** (RPC fetch + canonical RLP for every tx type).
+[About](#about) · [Quickstart](#quickstart) · [Running locally](#running-locally) · [Limitations](#limitations)
 
-The custom-mode JS engine and the Rust backend implement the same
-canonical RLP + keccak trie and produce byte-identical roots — the
-test suite locks the two together.
+</div>
 
-## Live demo
+## About
 
-**<https://medaymann.github.io/mpt-visualizer/>** — custom mode, no setup.
+The Merkle Patricia Trie is one of the harder Ethereum internals to picture: its branches, extensions, and leaves rearrange based on the keys you insert, and every node is tied to its parent by a hash. Reading about it rarely makes it click.
 
-Ethereum mode needs the backend, so it's only available when running
-locally (see [Running](#running)).
+This project makes it tangible, with two modes (both backed by canonical RLP encoding and keccak hashing):
 
----
+- **Custom mode :** build a trie from your own hex keys and values and watch branches, extensions, and leaves appear and split as the keys' prefixes overlap. Runs entirely in your browser. Click a node to see its keccak hash and how parents reference children, and click a leaf to trace its path back to the root.
 
-## Screenshots
+  <div align="center">
+    <img src="assets/custom-mode.png" alt="Custom mode" width="700"><br/>
+    <em>A custom-built trie from hand-entered hex keys.</em>
+  </div>
 
-**Custom mode** — small trie built from hand-entered hex keys.
+  <br/>
+  <br/>
 
-<img src="assets/custom-mode.png" alt="Custom mode" width="600">
+- **Ethereum block mode :** load any mainnet block and rebuild its transactions trie from the raw transactions. The computed root is verified against `block.transactionsRoot` in the block header, so what you see is provably the same trie the chain committed to. Every transaction type is supported (legacy through EIP-7702).
 
-**Ethereum block mode** — transactions trie for block 7,777,777, verified against the on-chain root.
+  <div align="center">
+    <img src="assets/ethereum-mode.png" alt="Ethereum block mode" width="700"><br/>
+    <em>The transactions trie of Ethereum block #7777777.</em>
+  </div>
 
-<img src="assets/ethereum-mode.png" alt="Ethereum block mode" width="600">
+## Quickstart
 
----
+Open the live demo: **<https://medaymann.github.io/mpt-visualizer/>**
 
-## Running
+Custom mode works immediately, nothing to install.
 
-### Custom mode only (no backend)
-
-Custom mode runs fully in-browser. Just serve the static files:
+Ethereum block mode needs the Rust backend. Clone the repo and start the backend; the demo page then uses it automatically:
 
 ```bash
+npm run backend:run        # starts on http://localhost:8081
+```
+
+Then switch to the Ethereum block tab on the live page and load a block.
+
+## Running locally
+
+Clone the repo, then serve the frontend (and the backend for Ethereum mode):
+
+```bash
+# terminal 1 — backend (only needed for Ethereum mode)
+npm run backend:run        # http://localhost:8081
+
+# terminal 2 — frontend
 npm run serve              # http://localhost:8080
 ```
 
-This is exactly what the hosted demo does.
-
-### Both modes (with the Rust backend)
-
-To enable Ethereum-block mode, also run the backend:
-
-```bash
-# terminal 1 — backend on http://localhost:8081
-npm run backend:build      # one-time
-npm run backend:run
-
-# terminal 2 — frontend on http://localhost:8080
-npm run serve
-```
-
-Open <http://localhost:8080>. On `localhost` the frontend assumes the
-backend is on `:8081` and enables Ethereum mode automatically. To point
-at a different backend (e.g. a deployed one), set `window.MPT_BACKEND`
-before the app boots:
-
-```html
-<script>window.MPT_BACKEND = 'https://your-backend.example.com';</script>
-```
-
-When no backend is configured (a plain static host), the Ethereum tab
-is disabled and explains how to enable it; custom mode keeps working.
-
----
-
-## Testing
-
-```bash
-npm test                  # frontend tests: JS keccak, rlp, trie engine, block-id helpers
-npm run backend:test      # backend unit tests (rlp, mpt, rpc)
-npm run backend:verify    # integration tests fetching real blocks
-```
-
-The frontend suite asserts the in-browser JS engine produces the same
-keccak roots as the Rust backend (the expected roots in
-`tests/mpt-engine.test.js` were captured from the backend), so the two
-implementations can't silently drift apart.
-
-`backend:verify` requires internet access and runs the trie against
-several real blocks spanning every transaction-type era: genesis,
-legacy, EIP-2930, EIP-1559, post-merge, and latest. Each test asserts
-that the computed root matches the on-chain `transactionsRoot`.
-
----
-
-## How verification works
-
-**Custom mode** builds the trie in the browser via `src/engine`
-(canonical RLP + keccak, a direct port of the Rust `mpt.rs`/`rlp.rs`).
-There's nothing external to verify against, so it just displays the
-computed root.
-
-**Ethereum mode** (`GET /api/block/:id`) goes through the Rust backend:
-
-1. Re-encode each transaction as canonical RLP. Every tx type is
-   supported: legacy, EIP-2930 (0x01), EIP-1559 (0x02), EIP-4844 blob
-   (0x03), EIP-7702 set-code (0x04).
-2. Insert `(RLP(tx_index), tx_envelope_bytes)` into a Merkle Patricia
-   Trie.
-3. Compute the trie's keccak root and compare to
-   `block.transactionsRoot`.
-4. If the roots don't match, the API returns HTTP 422 and the
-   frontend refuses to render.
-
----
+Open <http://localhost:8080> (Custom mode needs only the frontend; Ethereum mode needs both)
 
 ## Project layout
 
 ```
-backend/                Rust service (Axum)
+backend/                  Rust service (Ethereum mode)
   src/
-    main.rs             HTTP routes, request handling, LRU cache
-    rpc.rs              JSON-RPC client with hedged parallel calls
-    rlp.rs              RLP encoder
-    mpt.rs              Trie insert, hex-prefix encoding, keccak root
-    tx.rs               Canonical RLP for every transaction type
-  tests/
-    verify_real_blocks.rs   Integration tests against live blocks
+    main.rs               HTTP routes, request handling, LRU cache
+    rpc.rs                JSON-RPC client (hedged parallel calls)
+    rlp.rs                RLP encoder
+    mpt.rs                Trie insert, hex-prefix, keccak root
+    tx.rs                 Canonical RLP for every transaction type
+  tests/                  Integration tests against live blocks
 
 src/
-  styles.css            Page styles
-  engine/               In-browser trie engine (custom mode)
-    keccak.js           keccak-256 (Keccak-f[1600])
-    rlp.js              RLP encoder (port of rlp.rs)
-    mpt.js              Trie insert, hex-prefix, keccak root, view tree
-  visualization/        d3/SVG rendering
-    Renderer.js         Pan/zoom, drag, layout selection, level-of-detail,
-                        path highlight, layout-switch animation
-    LayoutEngine.js     Top-down tidy tree
-    RadialLayout.js     Concentric rings (used when the trie is wide)
-    BranchVisual.js, ExtensionVisual.js, LeafVisual.js, VisualNode.js
-    ConnectionManager.js
-    config.js
-  ui/                   Orchestration
-    App.js              Boots everything, wires the page
-    MPTVisualizer.js    Tracks state; custom mode builds via the JS engine
-    EthereumService.js  JS engine for custom mode; HTTP client for blocks
-    stats.js            countNodes() for the sidebar stats panel
-    examples.js         Preset key/value sets shown as chips
-    recentBlocks.js     localStorage-backed history of recently loaded blocks
+  engine/                 In-browser trie engine (custom mode)
+    keccak.js             keccak-256
+    rlp.js                RLP encoder (port of rlp.rs)
+    mpt.js                Trie insert, hex-prefix, keccak root, view tree
+  visualization/          d3/SVG rendering
+    Renderer.js           Pan/zoom, drag, layout, path highlight
+    LayoutEngine.js       Top-down tidy tree
+    RadialLayout.js       Concentric rings for wide tries
+    *Visual.js            Branch / Extension / Leaf node rendering
+    ConnectionManager.js  Edges between nodes
+  ui/                     Orchestration
+    App.js                Boots and wires the page
+    MPTVisualizer.js      Tracks state, drives the renderer
+    EthereumService.js    JS engine (custom) + HTTP client (blocks)
+    examples.js, recentBlocks.js, stats.js
 
-tests/                  Frontend test suite (node --test)
-index.html              Page shell
+tests/                    Frontend tests (node --test)
+index.html                Page shell
 ```
-
----
 
 ## Limitations
 
-- In Ethereum mode, only the **transactions trie** is visualized, not the state or
-  receipts trie. The transactions trie is rebuilt per block from
-  `txs[0..n]` and is small and self-contained. The state trie spans
-  hundreds of millions of accounts and would need an archive node.
+Ethereum mode visualizes the **transactions trie** only, not the state or receipts tries. The state trie spans hundreds of millions of accounts and would need an archive node. Support for the other tries may come later.
+
+Contributions are welcome.
