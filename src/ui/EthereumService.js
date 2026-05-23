@@ -1,16 +1,34 @@
 /**
  * EthereumService
  *
- * Talks to the mpt-backend Rust service, which does the heavy lifting:
- * fetches the block via JSON-RPC, builds the canonical MPT (RLP + keccak),
- * compares its root against the block's transactionsRoot, and returns a
- * frontend-friendly view tree.
+ * Custom mode is computed entirely in-browser by the JS trie engine
+ * (src/engine), so it works on a static deploy with no backend.
+ *
+ * Ethereum-block mode still needs the Rust backend: it fetches the block via
+ * JSON-RPC, rebuilds the transactions trie, and verifies the root against
+ * block.transactionsRoot. When no backend is configured/reachable that mode is
+ * disabled (see App.js graceful degradation).
  *
  * The pure helpers (rlpEncodeInt, normalizeBlockId) remain exported so the
  * client-side test suite can still validate them without booting the backend.
  */
 
+import { buildTrieResponse } from '../engine/mpt.js';
+
 const BACKEND_BASE = (typeof window !== 'undefined' && window.MPT_BACKEND) || 'http://localhost:8081';
+
+/**
+ * Whether Ethereum-block mode is available. True when a backend URL is
+ * explicitly configured (window.MPT_BACKEND) OR when running on localhost
+ * (the dev setup runs the Rust backend on :8081). On a static host with no
+ * MPT_BACKEND, this is false and the Ethereum tab is disabled.
+ */
+export const HAS_BACKEND = (() => {
+    if (typeof window === 'undefined') return false;
+    if (window.MPT_BACKEND) return true;
+    const h = window.location && window.location.hostname;
+    return h === 'localhost' || h === '127.0.0.1' || h === '';
+})();
 
 // --- pure helpers kept for tests ---------------------------------------------
 
@@ -130,16 +148,14 @@ export class EthereumService {
     }
 
     /**
-     * Build a trie from arbitrary hex-keyed entries (custom mode).
+     * Build a trie from arbitrary hex-keyed entries (custom mode). Computed
+     * in-browser by the JS engine — no backend needed. Async-shaped so callers
+     * stay unchanged.
      * @param {Object<string,string>} entries
      * @returns {Promise<{ root: object|null, computedRoot: string, nodeCount: number }>}
      */
     async buildTrie(entries) {
-        const body = await this._fetch(`${this.baseUrl}/api/trie/build`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ entries })
-        });
+        const body = buildTrieResponse(entries);
         return {
             root: viewToMpt(body.root),
             computedRoot: body.computed_root,

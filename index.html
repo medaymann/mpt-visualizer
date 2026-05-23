@@ -51,6 +51,11 @@
             </div>
 
             <div class="panel-body" id="panel-ethereum" hidden>
+                <div id="ethDisabledNote" class="eth-disabled-note" hidden>
+                    Ethereum mode needs the Rust backend. This hosted demo runs
+                    custom mode only — clone the repo and run the backend (see
+                    the README) to load and verify real blocks.
+                </div>
                 <label>Block number or hash</label>
                 <input type="text" id="blockInput" placeholder='e.g. 18000000, "latest", or 0x...' value="latest" />
                 <div class="btn-row">

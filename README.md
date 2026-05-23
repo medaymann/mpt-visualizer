@@ -5,13 +5,23 @@
 An interactive Merkle Patricia Trie explorer with two modes:
 
 - **Custom** — build a trie from your own hex-keyed entries and watch
-  how branches, extensions, and leaves form.
+  how branches, extensions, and leaves form. Runs **entirely in your
+  browser** (JS trie engine), so it works on the static demo with no
+  setup.
 - **Ethereum block** — load any block from Ethereum mainnet, rebuild
   its transactions trie, and verify the computed root against
-  `block.transactionsRoot` from the block header.
+  `block.transactionsRoot` from the block header. This mode needs the
+  **Rust backend** (RPC fetch + canonical RLP for every tx type).
 
-Tries are built in Rust, hashed with keccak, and (for blocks) checked
-against the on-chain root.
+The custom-mode JS engine and the Rust backend implement the same
+canonical RLP + keccak trie and produce byte-identical roots — the
+test suite locks the two together.
+
+## Live demo
+
+The hosted build runs **custom mode** with zero setup. Ethereum mode is
+disabled there (it needs the backend) — clone and run the backend
+locally to load and verify real blocks (see [Running](#running)).
 
 ---
 
@@ -29,8 +39,19 @@ against the on-chain root.
 
 ## Running
 
-You need both the **Rust backend** and a **static server** for the
-frontend.
+### Custom mode only (no backend)
+
+Custom mode runs fully in-browser. Just serve the static files:
+
+```bash
+npm run serve              # http://localhost:8080
+```
+
+This is exactly what the hosted demo does.
+
+### Both modes (with the Rust backend)
+
+To enable Ethereum-block mode, also run the backend:
 
 ```bash
 # terminal 1 — backend on http://localhost:8081
@@ -41,18 +62,47 @@ npm run backend:run
 npm run serve
 ```
 
-Open <http://localhost:8080>. Both modes call the backend, so it must
-be running.
+Open <http://localhost:8080>. On `localhost` the frontend assumes the
+backend is on `:8081` and enables Ethereum mode automatically. To point
+at a different backend (e.g. a deployed one), set `window.MPT_BACKEND`
+before the app boots:
+
+```html
+<script>window.MPT_BACKEND = 'https://your-backend.example.com';</script>
+```
+
+When no backend is configured (a plain static host), the Ethereum tab
+is disabled and explains how to enable it; custom mode keeps working.
+
+---
+
+## Deploying (custom mode)
+
+The frontend is plain static files (ES modules, relative paths, d3 from a
+CDN) — no build step. Custom mode works anywhere static files are served.
+
+- **GitHub Pages** — enable Pages on the repo root (or `/docs`). The
+  included `.nojekyll` keeps Pages from filtering files.
+- **Vercel** — import the repo; `vercel.json` declares no build and serves
+  the root.
+
+Ethereum mode stays disabled on these hosts unless you set
+`window.MPT_BACKEND` to a reachable backend.
 
 ---
 
 ## Testing
 
 ```bash
-npm test                  # frontend unit tests (rlp + block-id helpers)
+npm test                  # frontend tests: JS keccak, rlp, trie engine, block-id helpers
 npm run backend:test      # backend unit tests (rlp, mpt, rpc)
 npm run backend:verify    # integration tests fetching real blocks
 ```
+
+The frontend suite asserts the in-browser JS engine produces the same
+keccak roots as the Rust backend (the expected roots in
+`tests/mpt-engine.test.js` were captured from the backend), so the two
+implementations can't silently drift apart.
 
 `backend:verify` requires internet access and runs the trie against
 several real blocks spanning every transaction-type era: genesis,
@@ -63,10 +113,12 @@ that the computed root matches the on-chain `transactionsRoot`.
 
 ## How verification works
 
-Both modes go through the Rust backend so the displayed trie is
-always backed by canonical RLP + keccak.
+**Custom mode** builds the trie in the browser via `src/engine`
+(canonical RLP + keccak, a direct port of the Rust `mpt.rs`/`rlp.rs`).
+There's nothing external to verify against, so it just displays the
+computed root.
 
-**Ethereum mode** (`GET /api/block/:id`)
+**Ethereum mode** (`GET /api/block/:id`) goes through the Rust backend:
 
 1. Re-encode each transaction as canonical RLP. Every tx type is
    supported: legacy, EIP-2930 (0x01), EIP-1559 (0x02), EIP-4844 blob
@@ -95,6 +147,10 @@ backend/                Rust service (Axum)
 
 src/
   styles.css            Page styles
+  engine/               In-browser trie engine (custom mode)
+    keccak.js           keccak-256 (Keccak-f[1600])
+    rlp.js              RLP encoder (port of rlp.rs)
+    mpt.js              Trie insert, hex-prefix, keccak root, view tree
   visualization/        d3/SVG rendering
     Renderer.js         Pan/zoom, drag, layout selection, level-of-detail,
                         path highlight, layout-switch animation
@@ -105,8 +161,8 @@ src/
     config.js
   ui/                   Orchestration
     App.js              Boots everything, wires the page
-    MPTVisualizer.js    Tracks state, delegates trie construction to backend
-    EthereumService.js  HTTP client for the Rust backend
+    MPTVisualizer.js    Tracks state; custom mode builds via the JS engine
+    EthereumService.js  JS engine for custom mode; HTTP client for blocks
     stats.js            countNodes() for the sidebar stats panel
     examples.js         Preset key/value sets shown as chips
     recentBlocks.js     localStorage-backed history of recently loaded blocks
