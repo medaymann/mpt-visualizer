@@ -28,6 +28,8 @@ use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::Mutex;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::set_header::SetResponseHeaderLayer;
+use axum::http::{header, HeaderValue};
 
 struct AppState {
     http: reqwest::Client,
@@ -85,12 +87,18 @@ async fn main() -> Result<()> {
         .allow_headers(Any)
         .allow_origin(Any);
 
+    let pna = SetResponseHeaderLayer::if_not_present(
+        header::HeaderName::from_static("access-control-allow-private-network"),
+        HeaderValue::from_static("true"),
+    );
+
     let app = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route("/api/block/:id", get(block_handler))
         .route("/api/trie/build", post(build_handler))
         .with_state(Arc::new(state))
-        .layer(cors);
+        .layer(cors)
+        .layer(pna);
 
     let addr = "0.0.0.0:8081";
     println!("mpt-backend listening on http://{addr}");
